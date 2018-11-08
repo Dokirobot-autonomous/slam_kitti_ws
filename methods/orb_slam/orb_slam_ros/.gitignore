@@ -1,0 +1,11 @@
+# いらないフォルダ
+devel
+build
+cmake-build-debug
+
+# いらないファイル
+ceres-bin
+build_limo_release
+devel_limo_release
+logs_limo_release
+ORBvoc.txt

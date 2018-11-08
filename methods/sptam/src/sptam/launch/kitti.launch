@@ -1,0 +1,80 @@
+<launch>
+
+  <!-- Set use_sim_time true for datasets-->
+  <param name="use_sim_time" value="true" />
+
+<!--<group ns="imagetransport1">
+
+ <node name="republish1" type="republish" pkg="image_transport" output="screen" args="compressed in:=/sensor/camera/grayscale/left/image_rect/compressed out:=/sensor/camera/grayscale/left/image_rect" >
+
+  <param name="approximate_sync" value="true"/>
+
+  <param name="queue_size" value="10"/>
+
+</node>
+
+</group>
+
+
+
+<group ns="imagetransport2">
+
+ <node name="republish2" type="republish" pkg="image_transport" output="screen" args="compressed in:=/sensor/camera/grayscale/right/image_rect/compressed out:=/sensor/camera/grayscale/right/image_rect" >
+
+<param name="approximate_sync" value="true"/>
+
+<param name="queue_size" value="10"/>
+
+</node>
+
+</group> -->
+
+
+  <!-- static_transform_publisher x y z yaw pitch roll frame_id child_frame_id -->
+  <!-- This transform was used set only to test if everything works
+       when using something different than the camera as a reference frame.
+       If enabled, take care to also fix the transform below. -->
+  <!--node pkg="tf2_ros" type="static_transform_publisher" name="camera_broadcaster" args="1 0 0.5 -1.57 0 -1.57 base_link left_camera" /-->
+
+  <!-- 'start' frame is the starting pose of the camera
+       When 'base_link' is set as the reference frame,
+       take care to set this transformation to the same as the previous one -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="start_broadcaster" args="0 0 0 0 0 0 start map" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="transform_local_cs_2_sptam" args="0 0 0 0 0 0 local_cs map" />
+
+  <!-- S-PTAM pose path publisher. Used for visualization. -->
+  <node pkg="ros_utils" type="pose_to_path" name="sptam_path">
+    <remap from="pose" to="sptam/robot/pose" />
+    <remap from="path" to="sptam/robot/path" />
+  </node>
+
+  <!-- Nodelet Manager -->
+  <!--<node pkg="nodelet" type="nodelet" name="nodelet_manager"  args="manager" output="screen" clear_params="true"/>-->
+
+  <!-- Choose between Nodelet and Node S-PTAM -->
+  <node pkg="sptam" type="sptam_node" name="sptam" output="screen" >
+<!--  <node pkg="nodelet" type="nodelet" name="sptam" args="load sptam/sptam_nodelet nodelet_manager" output="screen" clear_params="true" >-->
+
+    <!-- Read S-PTAM parameters file -->
+    <rosparam command="load" file="$(find sptam)/configurationFiles/kitti.yaml" />
+    <param name="LoopDetectorVocabulary" value="$(find sptam)/bow_voc/DBoW2/brief_mit_malaga_vocabulary.yml.gz" />
+
+    <param name="use_prediction" value="false" />
+    <param name="approximate_sync" value="false" />
+    <param name="publish_transform" value="true" />
+    <param name="publish_on_fail" value="true" />
+
+    <!--param name="prediction_frame" value="odom" /-->
+    <param name="base_frame" value="left_camera" />
+    <param name="camera_frame" value="left_camera" />
+    <!--param name="map_frame" value="map" /-->
+    <param name="reference_frame" value="left_camera" />
+
+    <remap from="/stereo/left/image_rect" to="/sensor/camera/grayscale/left/image_raw" />
+    <remap from="/stereo/left/camera_info"  to="/sensor/camera/grayscale/left/camera_info" />
+    <remap from="/stereo/right/image_rect" to="/sensor/camera/grayscale/right/image_raw" />
+    <remap from="/stereo/right/camera_info"  to="/sensor/camera/grayscale/right/camera_info" />
+
+  </node>
+
+</launch>
