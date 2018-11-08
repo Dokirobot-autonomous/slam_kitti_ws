@@ -4,6 +4,7 @@
     <generated>
       <config projectName="Project" targetName="gmock" />
       <config projectName="Project" targetName="nav_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="geometry_msgs_generate_messages_lisp" />
       <config projectName="Project" targetName="tf_generate_messages_py" />
       <config projectName="Project" targetName="tf2_msgs_generate_messages_lisp" />
       <config projectName="Project" targetName="actionlib_msgs_generate_messages_nodejs" />
@@ -18,7 +19,6 @@
       <config projectName="Project" targetName="actionlib_msgs_generate_messages_eus" />
       <config projectName="Project" targetName="gtest_main" />
       <config projectName="Project" targetName="tests" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_cpp" />
       <config projectName="Project" targetName="kitti_player" />
       <config projectName="Project" targetName="roscpp_generate_messages_lisp" />
       <config projectName="Project" targetName="nav_msgs_generate_messages_eus" />
@@ -65,7 +65,7 @@
       <config projectName="Project" targetName="doxygen" />
       <config projectName="Project" targetName="dynamic_reconfigure_generate_messages_nodejs" />
       <config projectName="Project" targetName="geometry_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="geometry_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_cpp" />
       <config projectName="Project" targetName="std_msgs_generate_messages_eus" />
       <config projectName="Project" targetName="nav_msgs_generate_messages_lisp" />
       <config projectName="Project" targetName="actionlib_msgs_generate_messages_cpp" />
@@ -81,7 +81,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="402c980a-d2b8-4c8c-825e-bfb7fbcc3c2a" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../../../run/run.bash" beforeDir="false" afterPath="$PROJECT_DIR$/../../../run/run.bash" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mypkg/node/param_optimization.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/mypkg/node/param_optimization.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -95,9 +96,11 @@
     <session id="-1798875976">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
+          <entry key="project.closed" value="2" />
           <entry key="project.open.time.0" value="2" />
+          <entry key="project.open.time.1" value="1" />
           <entry key="project.open.time.2" value="1" />
-          <entry key="project.opened" value="3" />
+          <entry key="project.opened" value="4" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
@@ -114,25 +117,25 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="cpp" value="54" />
+          <entry key="cpp" value="79" />
           <entry key="txt" value="51" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="CMakeLists.txt" value="51" />
-          <entry key="ObjectiveC" value="54" />
+          <entry key="ObjectiveC" value="79" />
         </counts>
       </usages-collector>
     </session>
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/kitti_player/src/kitti_player.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="138">
-              <caret line="182" column="54" lean-forward="true" selection-start-line="182" selection-start-column="54" selection-end-line="182" selection-end-column="54" />
+            <state relative-caret-position="3120">
+              <caret line="208" column="47" selection-start-line="208" selection-start-column="47" selection-end-line="208" selection-end-column="47" />
               <folding>
                 <element signature="e#828#847#0" expanded="true" />
               </folding>
@@ -149,11 +152,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/mypkg/node/param_optimization.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="90">
-              <caret line="17" selection-start-line="17" selection-end-line="17" />
+            <state relative-caret-position="60">
+              <caret line="15" column="34" lean-forward="true" selection-start-line="15" selection-start-column="34" selection-end-line="15" selection-end-column="34" />
             </state>
           </provider>
         </entry>
@@ -706,12 +709,13 @@
       <updated>1541663334051</updated>
       <workItem from="1541663335418" duration="2436000" />
       <workItem from="1541666270065" duration="36000" />
-      <workItem from="1541671799037" duration="54000" />
+      <workItem from="1541671799037" duration="876000" />
+      <workItem from="1541673347499" duration="202000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="2526000" />
+    <option name="totallyTimeSpent" value="3550000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -724,9 +728,8 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="65" y="24" width="928" height="1056" extended-state="4" />
-    <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2324263" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.23809524" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -737,7 +740,7 @@
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3297414" />
       <window_info anchor="bottom" id="Database Changes" order="7" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Terminal" order="8" visible="true" weight="0.14224137" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="8" visible="true" weight="0.14224137" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="10" show_stripe_button="false" />
       <window_info anchor="bottom" id="CMake" order="11" weight="0.3297414" />
@@ -758,6 +761,16 @@
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/error_calculater/CMakeLists.txt" />
+    <entry file="file://$PROJECT_DIR$/kitti_player/src/kitti_player.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="3120">
+          <caret line="208" column="47" selection-start-line="208" selection-start-column="47" selection-end-line="208" selection-end-column="47" />
+          <folding>
+            <element signature="e#828#847#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/slam_fusion/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="240">
@@ -767,18 +780,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/mypkg/node/param_optimization.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="90">
-          <caret line="17" selection-start-line="17" selection-end-line="17" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/kitti_player/src/kitti_player.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="138">
-          <caret line="182" column="54" lean-forward="true" selection-start-line="182" selection-start-column="54" selection-end-line="182" selection-end-column="54" />
-          <folding>
-            <element signature="e#828#847#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="60">
+          <caret line="15" column="34" lean-forward="true" selection-start-line="15" selection-start-column="34" selection-end-line="15" selection-end-column="34" />
         </state>
       </provider>
     </entry>
