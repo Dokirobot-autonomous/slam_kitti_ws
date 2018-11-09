@@ -181,6 +181,7 @@ static std::ofstream ofs;
 static std::string filename;
 
 static ros::NodeHandle* nh_global;
+static ros::NodeHandle* private_nh_global;
 
 static void param_callback(const autoware_msgs::ConfigNdtMapping::ConstPtr& input)
 {
@@ -481,14 +482,14 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
 
   //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
-    nh_global->getParam("my_ndt_param/resolution",ndt_res );
-    nh_global->getParam("my_ndt_param/step_size",step_size);
-    nh_global->getParam("my_ndt_param/transformation_epsilon",trans_eps);
-    nh_global->getParam("my_ndt_param/maximum_iterations",max_iter);
-    nh_global->getParam("my_ndt_param/leaf_size",voxel_leaf_size);
-    nh_global->getParam("my_ndt_param/minimum_scan_range",min_scan_range);
-    nh_global->getParam("my_ndt_param/maximum_scan_range",max_scan_range);
-    nh_global->getParam("my_ndt_param/minimum_add_shift",min_add_scan_shift);
+    private_nh_global->getParam("resolution",ndt_res );
+    private_nh_global->getParam("step_size",step_size);
+    private_nh_global->getParam("transformation_epsilon",trans_eps);
+    private_nh_global->getParam("maximum_iterations",max_iter);
+    private_nh_global->getParam("leaf_size",voxel_leaf_size);
+    private_nh_global->getParam("minimum_scan_range",min_scan_range);
+    private_nh_global->getParam("maximum_scan_range",max_scan_range);
+    private_nh_global->getParam("minimum_add_shift",min_add_scan_shift);
 
     std::cout << "param_callback" << std::endl;
     std::cout << "ndt_res: " << ndt_res << std::endl;
@@ -929,7 +930,7 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
           nh_global->shutdown();
       }
   }
-
+  private_nh_global->setParam("done_pose_calculation",1);
     //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
 }
@@ -1009,9 +1010,10 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
   ros::NodeHandle private_nh("~");
 
-  nh.setParam("exist_ndt_mapping",1);
+  private_nh.setParam("exist_ndt_mapping",1);
 
   nh_global=&nh;
+  private_nh_global=&private_nh;
 
   // Set log file name.
   char buffer[80];

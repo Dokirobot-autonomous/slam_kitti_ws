@@ -1581,6 +1581,20 @@ int main(int argc, char **argv)
 //        }
 
         node.setParam("entries_played",(int)entries_played);
+        int first_node_num,last_node_num;
+        node.getParam("first_node_num",first_node_num);
+        node.getParam("last_node_num",last_node_num);
+        for (int in=first_node_num;in<=last_node_num;in++){
+            while(true){
+                std::string str="/ndt_mapping"+std::to_string(in)+"/done_pose_calculation";
+                int done_pose_calculation;
+                node.getParam(str,done_pose_calculation);
+                if(done_pose_calculation==1){
+                    node.setParam(str,0);
+                    break;
+                }
+            }
+        }
 
         if (!options.synchMode)
             loop_rate.sleep();
