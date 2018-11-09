@@ -17,16 +17,16 @@
 
 
 /* for NDT Mapping */
-#define RESOLUTION {0.2,0.4,0.6,0.8,1.0}
-#define STEP_SIZE {0.05,0.1,0.15,0.2}
-#define TRANSFORMATION_EPSILON {0.01,0.02,0.03}
-#define MAXIMUM_ITERATIONS {30}
-#define LEAF_SIZE {0.2,0.4,0.6,0.8,1.0}
-//#define RESOLUTION {1.0}
-//#define STEP_SIZE {0.1}
-//#define TRANSFORMATION_EPSILON {0.01}
+//#define RESOLUTION {0.2,0.4,0.6,0.8,1.0}
+//#define STEP_SIZE {0.05,0.1,0.15,0.2}
+//#define TRANSFORMATION_EPSILON {0.01,0.02,0.03}
 //#define MAXIMUM_ITERATIONS {30}
-//#define LEAF_SIZE {1.0}
+//#define LEAF_SIZE {0.2,0.4,0.6,0.8,1.0}
+#define RESOLUTION {5.0,4.0,3.0,2.0,1.0}
+#define STEP_SIZE {0.1}
+#define TRANSFORMATION_EPSILON {0.01}
+#define MAXIMUM_ITERATIONS {30}
+#define LEAF_SIZE {1.0}
 #define MINIMUM_SCAN_RANGE {5}
 #define MAXIMUM_SCAN_RANGE {200}
 #define MINIMUM_ADD_SCAN_SHIFT {1}
@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
 
                                     std::vector<float> trans_errors,rotate_errors;
 
-                                    for(unsigned int seq=0;seq<11;seq++){
+                                    for(unsigned int seq=1;seq<2;seq++){
                                         ErrorCalculator ec;
 
                                         /* Subscribe */

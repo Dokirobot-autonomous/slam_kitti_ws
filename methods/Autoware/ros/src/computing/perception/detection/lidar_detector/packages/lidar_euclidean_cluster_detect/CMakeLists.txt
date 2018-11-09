@@ -41,6 +41,8 @@ catkin_package(
         INCLUDE_DIRS include
 )
 
+find_package(PCL 1.8 REQUIRED)
+
 # Resolve system dependency on yaml-cpp, which apparently does not
 # provide a CMake find_package() module.
 find_package(PkgConfig REQUIRED)
@@ -51,6 +53,7 @@ link_directories(${YAML_CPP_LIBRARY_DIRS})
 
 include_directories(
         include
+        ${PCL_INCLUDE_DIRS}
         ${catkin_INCLUDE_DIRS}
         ${OpenCV_INCLUDE_DIRS}
 )
@@ -101,6 +104,8 @@ endif ()
 add_dependencies(lidar_euclidean_cluster_detect
         ${catkin_EXPORTED_TARGETS}
         )
+add_definitions(${PCL_DEFINITIONS})
+
 
 if (OPENMP_FOUND)
     set_target_properties(lidar_euclidean_cluster_detect PROPERTIES
