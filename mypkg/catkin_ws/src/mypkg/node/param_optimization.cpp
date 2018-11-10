@@ -173,151 +173,147 @@ int main(int argc, char **argv) {
 
     nh.setParam("exist_param_optimization",1);
 
+    std::string fname_param = std::string(OUTPUT_FNAME) + std::string("params.csv");
+    std::ofstream ofs_params(fname_param.c_str(), std::ios_base::app);
+    if (ofs_params.fail()) {
+        ROS_ERROR_STREAM("No exist output directory");
+        std::cout << fname_param << std::endl;
+        return -1;
+    }
+//        ofs_params<<"res,step,trans,max_itr,leaf,min_scan,max_scan,min_add"<<std::endl;
 
-        std::string fname_param=std::string(OUTPUT_FNAME)+std::string("params.csv");
-        std::ofstream ofs_params(fname_param.c_str());
-        if(ofs_params.fail()){
-            ROS_ERROR_STREAM("No exist output directory");
-            std::cout<<fname_param<<std::endl;
-            return -1;
+    std::string fname_tr = std::string(OUTPUT_FNAME) + std::string("error_trans.csv");
+    std::ofstream ofs_tr(fname_tr.c_str(), std::ios_base::app);
+    if (ofs_tr.fail()) {
+        ROS_ERROR_STREAM("No exist output directory");
+        std::cout << fname_param << std::endl;
+        return -1;
+    }
+//        ofs_tr<<"Seq00,Sec01,Seq02,Sec03,Seq04,Sec05,Seq06,Sec07,Seq08,Sec09,Sec10"<<std::endl;
+
+    std::string fname_ro = std::string(OUTPUT_FNAME) + std::string("error_rotate.csv");
+    std::ofstream ofs_ro(fname_ro.c_str(), std::ios_base::app);
+    if (ofs_ro.fail()) {
+        ROS_ERROR_STREAM("No exist output directory");
+        std::cout << fname_param << std::endl;
+        return -1;
+    }
+    //        ofs_ro<<"Seq00,Sec01,Seq02,Sec03,Seq04,Sec05,Seq06,Sec07,Seq08,Sec09,Sec10"<<std::endl;
+
+    ROS_INFO_STREAM(__FILE__<<","<<__LINE__);
+    int first_node_num,last_node_num;
+    nh.getParam("first_node_num",first_node_num);
+    nh.getParam("last_node_num",last_node_num);
+    int node_num=last_node_num-first_node_num+1;
+    ROS_INFO_STREAM("FIRST_NODE_NUM: "<<first_node_num);
+    ROS_INFO_STREAM("LAST_NODE_NUM: "<<last_node_num);
+    ROS_INFO_STREAM("NODE_NUM: "<<node_num);
+
+    // get parameters
+    std::vector<float> res,step,trans,max_ite,leaf,min_scan,max_scan,min_shift;
+    res.resize(node_num);
+    step.resize(node_num);
+    trans.resize(node_num);
+    max_ite.resize(node_num);
+    leaf.resize(node_num);
+    min_scan.resize(node_num);
+    max_scan.resize(node_num);
+    min_shift.resize(node_num);
+    ROS_INFO_STREAM(__FILE__<<","<<__LINE__);
+
+    for(int i=0;i<node_num;i++){
+        std::string str="/ndt_mapping"+std::to_string(i);
+        nh.getParam(str+"resolution",res[i]);
+        nh.getParam(str+"step_size",step[i]);
+        nh.getParam(str+"transformation_epsilon",trans[i]);
+        nh.getParam(str+"maximu_iterations",max_ite[i]);
+        nh.getParam(str+"leaf_size",leaf[i]);
+        nh.getParam(str+"minimum_scan_range",min_scan[i]);
+        nh.getParam(str+"maximum_scan_range",max_scan[i]);
+        nh.getParam(str+"minimum_add_scan_shift",min_shift[i]);
+    }
+    ROS_INFO_STREAM(__FILE__<<","<<__LINE__);
+
+
+
+
+
+    std::vector<std::vector<float>> trans_errors(11);
+    std::vector<std::vector<float>> rotate_errors(11);
+
+    while(true){
+    ROS_INFO_STREAM(__FILE__<<","<<__LINE__);
+        std::vector<ErrorCalculator> ec(last_node_num-first_node_num+1);
+        std::vector<ros::Subscriber> sub_ground(last_node_num-first_node_num+1);
+        std::vector<ros::Subscriber> sub_ndt(last_node_num-first_node_num+1);
+        for(int i=0;i<node_num;i++){
+            sub_ground[i]=nh.subscribe("/groundtruth_pose/path", 1, &ErrorCalculator::callback_ground, &ec[i]);
+            sub_ndt[i]=nh.subscribe("/current_path"+std::to_string(i), 1, &ErrorCalculator::callback_ndt_path, &ec[i]);
         }
-        ofs_params<<"res,step,trans,max_itr,leaf,min_scan,max_scan,min_add"<<std::endl;
 
-        std::string fname_tr=std::string(OUTPUT_FNAME)+std::string("error_trans.csv");
-        std::ofstream ofs_tr(fname_tr.c_str());
-        if(ofs_tr.fail()){
-            ROS_ERROR_STREAM("No exist output directory");
-            std::cout<<fname_param<<std::endl;
-            return -1;
-        }
-        ofs_tr<<"Seq00,Sec01,Seq02,Sec03,Seq04,Sec05,Seq06,Sec07,Seq08,Sec09,Sec10"<<std::endl;
+        int exist_ndt_mapping;
+        /* ndt_mapping が起動していなければloop */
+        for(int i=0;i<node_num;i++) {
+            while (true) {
+                std::string str="/ndt_mapping"+std::to_string(i)+"/exist_ndt_mapping";
+                nh.getParam(str, exist_ndt_mapping);
+                if (nh.hasParam(str) && exist_ndt_mapping == 1) break;
 
-        std::string fname_ro=std::string(OUTPUT_FNAME)+std::string("error_rotate.csv");
-        std::ofstream ofs_ro(fname_ro.c_str());
-        if(ofs_ro.fail()){
-            ROS_ERROR_STREAM("No exist output directory");
-            std::cout<<fname_param<<std::endl;
-            return -1;
-        }
-        ofs_ro<<"Seq00,Sec01,Seq02,Sec03,Seq04,Sec05,Seq06,Sec07,Seq08,Sec09,Sec10"<<std::endl;
-
-
-    float resolution[]=RESOLUTION;
-    float step_size[]=STEP_SIZE;
-    float transformation_epsilon[]=TRANSFORMATION_EPSILON;
-    float maximum_iterations[]=MAXIMUM_ITERATIONS;
-    float leaf_size[]=LEAF_SIZE;
-    float minimum_scan_range[]=MINIMUM_SCAN_RANGE;
-    float maximum_scan_range[]=MAXIMUM_SCAN_RANGE;
-    float minimum_add_shift[]=MINIMUM_ADD_SCAN_SHIFT;
-
-    int resolution_size=sizeof(resolution)/sizeof(float);
-    int step_size_size=sizeof(step_size)/sizeof(float);
-    int transformation_epsilon_size=sizeof(transformation_epsilon)/sizeof(float);
-    int maximum_iterations_size=sizeof(maximum_iterations)/sizeof(float);
-    int leaf_size_size=sizeof(leaf_size)/sizeof(float);
-    int minimum_scan_range_size=sizeof(minimum_scan_range)/sizeof(float);
-    int maximum_scan_range_size=sizeof(maximum_scan_range)/sizeof(float);
-    int minimum_add_shift_size=sizeof(minimum_add_shift)/sizeof(float);
-
-    for(int ir=0;ir<resolution_size;ir++){
-        for(int is=0;is<step_size_size;is++){
-            for(int it=0;it<transformation_epsilon_size;it++){
-                for(int imi=0;imi<maximum_iterations_size;imi++){
-                    for(int il=0;il<leaf_size_size;il++){
-                        for(int imins=0;imins<minimum_scan_range_size;imins++){
-                            for(int imaxs=0;imaxs<maximum_scan_range_size;imaxs++){
-                                for(int ima=0;ima<minimum_add_shift_size;ima++){
-
-                                    float params[]={resolution[ir],step_size[is],transformation_epsilon[it],
-                                                    maximum_iterations[imi],leaf_size[il],minimum_scan_range[imins],
-                                                    maximum_scan_range[imaxs],minimum_add_shift[ima]};
-
-                                    ROS_INFO_STREAM("Paramters: res,step,trans,max_itr,leaf,min_scan,max_scan,min_add");
-                                    for(int i=0;i<7;i++){
-                                        ROS_INFO_STREAM(params[i]);
-                                    }
-
-                                    nh.setParam("my_ndt_param/resolution",params[0]);
-                                    nh.setParam("my_ndt_param/step_size",params[1]);
-                                    nh.setParam("my_ndt_param/transformation_epsilon",params[2]);
-                                    nh.setParam("my_ndt_param/maximum_iterations",params[3]);
-                                    nh.setParam("my_ndt_param/leaf_size",params[4]);
-                                    nh.setParam("my_ndt_param/minimum_scan_range",params[5]);
-                                    nh.setParam("my_ndt_param/maximum_scan_range",params[6]);
-                                    nh.setParam("my_ndt_param/minimum_add_shift",params[7]);
-
-                                    std::vector<float> trans_errors,rotate_errors;
-
-                                    for(unsigned int seq=1;seq<2;seq++){
-                                        ErrorCalculator ec;
-
-                                        /* Subscribe */
-                                        ros::Subscriber sub_ground = nh.subscribe("/groundtruth_pose/path", 1, &ErrorCalculator::callback_ground, &ec);
-                                        ros::Subscriber sub_ndt = nh.subscribe("/current_path", 1, &ErrorCalculator::callback_ndt_path, &ec);
-
-                                        nh.setParam("current_sequence",(int)seq);
-                                        nh.setParam("start_mapping",1);
-
-                                        int exist_ndt_mapping;
-                                        /* ndt_mapping が起動していなければloop */
-                                        while(true){
-                                            nh.getParam("exist_ndt_mapping",exist_ndt_mapping);
-                                            if(nh.hasParam("exist_ndt_mapping") && exist_ndt_mapping==1) break;
-                                            std::this_thread::sleep_for(std::chrono::seconds(1));
-                                        }
-
-                                        while(true){
-                                            nh.getParam("exist_ndt_mapping",exist_ndt_mapping);
-                                            ros::spinOnce();
-                                        if(exist_ndt_mapping==0) break;
-                                            std::this_thread::sleep_for(std::chrono::seconds(1));
-                                        }
-
-                                        ec.transformPath();
-                                        float te=ec.getTransitionError();
-                                        float re=ec.getRotationError();
-                                        trans_errors.push_back(te);
-                                        rotate_errors.push_back(re);
-                                    }
-
-                                    for(unsigned int i=0;i<8;i++){
-                                        if(i!=7){
-                                            ofs_params<<params[i]<<",";
-                                        }
-                                        else{
-                                            ofs_params<<params[i]<<std::endl;
-                                        }
-                                    }
-                                    for(unsigned int i=0;i<trans_errors.size();i++){
-                                        ROS_INFO("a");
-                                        if(i!=(trans_errors.size()-1)){
-                                            ROS_INFO("b");
-                                            ofs_tr<<trans_errors[i]<<",";
-                                        }
-                                        else{
-                                            ROS_INFO("c");
-                                            ofs_tr<<trans_errors[i]<<std::endl;
-                                        }
-                                    }
-                                    for(unsigned int i=0;i<rotate_errors.size();i++){
-                                        if(i!=rotate_errors.size()-1){
-                                            ofs_ro<<rotate_errors[i]<<",";
-                                        }
-                                        else{
-                                            ofs_ro<<rotate_errors[i]<<std::endl;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                int fin_all_sequence;
+                if(!nh.getParam("fin_all_sequence",fin_all_sequence)){
+                    fin_all_sequence=0;
                 }
+                if(fin_all_sequence==1){
+                    nh.setParam("fin_all_sequence",0);
+                    goto FINISH;
+                }
+
+                std::this_thread::sleep_for(std::chrono::seconds(1));
             }
         }
+
+        for(int i=0;i<node_num;i++) {
+            while (true) {
+                ros::spinOnce();
+                std::string str="/ndt_mapping"+std::to_string(i)+"/exist_ndt_mapping";
+                nh.getParam(str, exist_ndt_mapping);
+                if (exist_ndt_mapping == 0) break;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+        }
+
+        for(int i=0;i<node_num;i++) {
+            ec[i].transformPath();
+            float te = ec[i].getTransitionError();
+            float re = ec[i].getRotationError();
+            trans_errors[i].push_back(te);
+            rotate_errors[i].push_back(re);
+            nh.setParam("done_error_calculation"+std::to_string(i),1);
+        }
+
+        int fin_all_sequence;
+        if(!nh.getParam("fin_all_sequence",fin_all_sequence)){
+            fin_all_sequence=0;
+        }
+        if(fin_all_sequence==1){
+            nh.setParam("fin_all_sequence",0);
+            goto FINISH;
+            break;
+        }
+
     }
 
-    nh.setParam("exist_param_optimization",0);
+    FINISH:
+
+    for(int i=0;i<node_num;i++) {
+        ofs_params << "," << res[i] << "," << step[i] << "," << trans[i] << "," << max_ite[i] << "," << leaf[i] << "," << min_scan[i] << "," << max_scan[i] << "," << min_shift[i] << "," << std::endl;
+        for(int j=0;j<trans_errors.size()-1;j++){
+            ofs_tr<<trans_errors[i][j]<<",";
+            ofs_ro<<rotate_errors[i][j]<<",";
+        }
+        ofs_tr<<std::endl;
+        ofs_ro<<std::endl;
+    }
 
 
     return (0);
