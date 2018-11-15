@@ -39,17 +39,45 @@ private:
     nav_msgs::Path ground, ndt_path, ndt_path_transformed;
     bool start_calculation_;
 
+    ros::NodeHandle nh;
     tf::TransformListener listener;
 
+    ros::Publisher ndt_pose_transformed_pub;
+
 public:
+
+    void initialize(ros::NodeHandle& nh){
+        this->nh=nh;
+        ndt_pose_transformed_pub=nh.advertise<geometry_msgs::PoseStamped>("/ndt_pose_transformed", 1000);
+    }
+
     void callback_ground(const nav_msgs::Path::ConstPtr &msg) {
         ROS_INFO("callback_ground");
         ground = *msg;
     }
 
+    void publishNdtPoseTransformed(const geometry_msgs::PoseStamped &msg){
+
+        geometry_msgs::PoseStamped pose_transformed;
+
+        try {
+            listener.transformPose("local_cs", msg.header.stamp, msg, msg.header.frame_id, pose_transformed);
+        }
+        catch (tf::TransformException ex) {
+            ROS_ERROR("%s", ex.what());
+            ros::Duration(1.0).sleep();
+        }
+
+//        pose_transformed.header=msg.header;
+        ndt_pose_transformed_pub.publish(pose_transformed);
+
+
+    }
+
     void callback_ndt_path(const nav_msgs::Path::ConstPtr &msg) {
         ROS_INFO("callback_ndt");
         ndt_path = *msg;
+        publishNdtPoseTransformed(msg->poses.back());
     }
 
     void transformPath() {
@@ -93,14 +121,15 @@ public:
 //                continue;
 
             /* 移動距離 */
-            double dx = path1.poses[i].pose.position.x - path1.poses[0].pose.position.x;
-            double dy = path1.poses[i].pose.position.y - path1.poses[0].pose.position.y;
-            double dz = path1.poses[i].pose.position.z - path1.poses[0].pose.position.z;
+            double dx = path1.poses[i].pose.position.x - path1.poses[i-1].pose.position.x;
+            double dy = path1.poses[i].pose.position.y - path1.poses[i-1].pose.position.y;
+            double dz = path1.poses[i].pose.position.z - path1.poses[i-1].pose.position.z;
             migration_distance += std::sqrt(dx * dx + dy * dy + dz * dz);
 
-            double ex = path1.poses[i].pose.position.x - path2.poses[0].pose.position.x;
-            double ey = path1.poses[i].pose.position.y - path2.poses[0].pose.position.y;
-            double ez = path1.poses[i].pose.position.z - path2.poses[0].pose.position.z;
+            double ex = path1.poses[i].pose.position.x - path2.poses[i].pose.position.x;
+            double ey = path1.poses[i].pose.position.y - path2.poses[i].pose.position.y;
+            double ez = path1.poses[i].pose.position.z - path2.poses[i].pose.position.z;
+            ROS_INFO_STREAM(std::sqrt(ex * ex + ey * ey + ez * ez) <<","<< migration_distance);
             ROS_INFO_STREAM(std::sqrt(ex * ex + ey * ey + ez * ez) / migration_distance);
             error += (std::sqrt(ex * ex + ey * ey + ez * ez) / migration_distance);
 
@@ -223,6 +252,7 @@ int main(int argc, char **argv) {
 
 
     ErrorCalculator ec;
+    ec.initialize(nh);
     ros::Subscriber sub_ground;
     ros::Subscriber sub_ndt;
     sub_ground = nh.subscribe("/groundtruth_pose/path", 1, &ErrorCalculator::callback_ground, &ec);

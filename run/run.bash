@@ -11,13 +11,13 @@ STEP_SIZE_ARRAY=(0.1)
 TRANSFORMATION_EPSILON_ARRAY=(0.01)
 #TRANSFORMATION_EPSILON_ARRAY=(0.01 0.02 0.03)
 MAXIMUM_ITERATIONS_ARRAY=(30)
-#LEAF_SIZE_ARRAY=(0.4)
-LEAF_SIZE_ARRAY=(0.2 0.4 0.5 0.6 0.8)
+LEAF_SIZE_ARRAY=(0.2)
+#LEAF_SIZE_ARRAY=(0.2 0.4 0.5 0.6 0.8)
 MINIMUM_SCAN_RANGE_ARRAY=(5)
 MAXIMUM_SCAN_RANGE_ARRAY=(200)
 MINIMUM_ADD_SCAN_SHIFT_ARRAY=(1)
-SEQUENCE_ARRAY=(0 1 2 3 4 5 6 7 8 9 10)
-#SEQUENCE_ARRAY=(0 10)
+#SEQUENCE_ARRAY=(0 1 2 3 4 5 6 7 8 9 10)
+SEQUENCE_ARRAY=(0 1)
 
 RESOLUTION=$RESOLUTION_ARRAY
 STEP_SIZE=$STEP_SIZE_ARRAY
@@ -84,7 +84,7 @@ do
 
                   ## play NDT_Mapping nodes
                   xterm -e bash -c "cd ~/slam_kitti_ws/mypkg/catkin_ws; source devel/setup.bash; roslaunch lidar_localizer ndt_mapping_tku.launch" &
-                  sleep 1
+                  sleep 3
 
 
                   xterm -e bash -c 'cd ~/slam_kitti_ws/mypkg/catkin_ws/; source devel/setup.bash; rosrun mypkg param_optimization' &
