@@ -1605,8 +1605,8 @@ int main(int argc, char **argv)
 
         entries_played++;
 
-
-//        if (entries_played>20){
+//
+//        if (entries_played>10){
 //            break;
 //        }
 
