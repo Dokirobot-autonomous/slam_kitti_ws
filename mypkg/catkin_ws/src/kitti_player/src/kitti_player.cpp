@@ -191,6 +191,10 @@ int publish_groundtruth(ros::Publisher &pub_pose,ros::Publisher &pub_path, strin
     pose.pose.orientation.y=q.y();
     pose.pose.orientation.z=q.z();
     pose.pose.orientation.w=q.w();
+    if(std::abs(P[3])>1.0E+10 || std::abs(P[7])>1.0E+10 || std::abs(P[11])>1.0E+10 || std::abs(q.x())>1.0E+10 || std::abs(q.y())>1.0E+10 || std::abs(q.z())>1.0E+10 || std::abs(q.w())>1.0E+10){
+        return 0;
+    }
+
     path.poses.push_back(pose);
     pub_pose.publish(pose);
     pub_path.publish(path);
@@ -1427,35 +1431,40 @@ int main(int argc, char **argv)
 
         if(options.groundtruth || options.all_data)
         {
+            while(true){
 
-            // reading timesstamps
-            str_support = dir_timestamp_groundtruth + "times.txt";
-            ifstream timestamps(str_support.c_str());
-            if (!timestamps.is_open())
-            {
-                //ROS_ERROR_STREAM("Fail to open " << timestamps);
-                node.shutdown();
-                return -1;
+                // reading timesstamps
+                str_support = dir_timestamp_groundtruth + "times.txt";
+                ifstream timestamps(str_support.c_str());
+                if (!timestamps.is_open())
+                {
+                    //ROS_ERROR_STREAM("Fail to open " << timestamps);
+                    node.shutdown();
+                    return -1;
+                }
+                // times.txtの一行の文字数*entries_playedにする
+                timestamps.seekg(13 * entries_played);
+                getline(timestamps, str_support);
+                header_support.stamp = parseTime(str_support).stamp;
+                // reading pose
+                full_filename_groundtruth=dir_groundtruth+"pose.txt";
+                ifstream poses(full_filename_groundtruth.c_str());
+                if (!poses.is_open())
+                {
+                    //ROS_ERROR_STREAM("Fail to open " << timestamps);
+                    node.shutdown();
+                    return -1;
+                }
+                // times.txtの一行の文字数*entries_playedにする
+                for(int i=0;i<=entries_played;i++){
+                    getline(poses, str_support);
+                }
+//                ROS_INFO_STREAM(entries_played<<","<<str_support);
+                int fin=publish_groundtruth(groundpose_pub,groundpath_pub,str_support,&header_support);
+                if(fin==1){
+                    break;
+                }
             }
-            // times.txtの一行の文字数*entries_playedにする
-            timestamps.seekg(13 * entries_played);
-            getline(timestamps, str_support);
-            header_support.stamp = parseTime(str_support).stamp;
-            // reading pose
-            full_filename_groundtruth=dir_groundtruth+"pose.txt";
-            ifstream poses(full_filename_groundtruth.c_str());
-            if (!poses.is_open())
-            {
-                //ROS_ERROR_STREAM("Fail to open " << timestamps);
-                node.shutdown();
-                return -1;
-            }
-            // times.txtの一行の文字数*entries_playedにする
-            for(int i=0;i<=entries_played;i++){
-                getline(poses, str_support);
-            }
-            ROS_INFO_STREAM(entries_played<<","<<str_support);
-            publish_groundtruth(groundpose_pub,groundpath_pub,str_support,&header_support);
 
         }
 

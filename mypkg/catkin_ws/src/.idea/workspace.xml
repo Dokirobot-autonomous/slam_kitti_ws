@@ -232,17 +232,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="402c980a-d2b8-4c8c-825e-bfb7fbcc3c2a" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/lidar_localizer/launch/ndt_mapping_tku0.launch" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lidar_localizer/launch/ndt_mapping_tku1.launch" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lidar_localizer/launch/ndt_mapping_tku2.launch" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lidar_localizer/launch/ndt_mapping_tku3.launch" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lidar_localizer/launch/ndt_mapping_tku4.launch" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../methods/Autoware/ros/src/computing/perception/localization/packages/lidar_localizer/launch/ndt_mapping_tku.launch" beforeDir="false" afterPath="$PROJECT_DIR$/../../../methods/Autoware/ros/src/computing/perception/localization/packages/lidar_localizer/launch/ndt_mapping_tku.launch" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/kitti_player/src/kitti_player.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/kitti_player/src/kitti_player.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mypkg/node/param_optimization.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/mypkg/node/param_optimization.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../../run/run.bash" beforeDir="false" afterPath="$PROJECT_DIR$/../../../run/run.bash" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -284,7 +274,7 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="cpp" value="5522" />
+          <entry key="cpp" value="5647" />
           <entry key="launch" value="48" />
           <entry key="txt" value="52" />
         </counts>
@@ -292,7 +282,7 @@
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="CMakeLists.txt" value="52" />
-          <entry key="ObjectiveC" value="5522" />
+          <entry key="ObjectiveC" value="5647" />
           <entry key="PLAIN_TEXT" value="48" />
         </counts>
       </usages-collector>
@@ -303,8 +293,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/kitti_player/src/kitti_player.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="121">
-              <caret line="1429" column="12" selection-start-line="1429" selection-start-column="12" selection-end-line="1429" selection-end-column="12" />
+            <state relative-caret-position="135">
+              <caret line="1457" column="53" lean-forward="true" selection-start-line="1457" selection-start-column="53" selection-end-line="1457" selection-end-column="53" />
               <folding>
                 <element signature="e#828#847#0" expanded="true" />
               </folding>
@@ -1879,12 +1869,12 @@
       <workItem from="1542087274055" duration="53000" />
       <workItem from="1542089485628" duration="730000" />
       <workItem from="1542090394212" duration="3629000" />
-      <workItem from="1542249771318" duration="778000" />
+      <workItem from="1542249771318" duration="1642000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="43191000" />
+    <option name="totallyTimeSpent" value="44055000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -1897,7 +1887,6 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="64" y="-11" width="1857" height="1092" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.09176341" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -2024,8 +2013,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/kitti_player/src/kitti_player.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="121">
-          <caret line="1429" column="12" selection-start-line="1429" selection-start-column="12" selection-end-line="1429" selection-end-column="12" />
+        <state relative-caret-position="135">
+          <caret line="1457" column="53" lean-forward="true" selection-start-line="1457" selection-start-column="53" selection-end-line="1457" selection-end-column="53" />
           <folding>
             <element signature="e#828#847#0" expanded="true" />
           </folding>
