@@ -93,14 +93,14 @@ public:
 //                continue;
 
             /* 移動距離 */
-            double dx = path1.poses[i].pose.position.x - path1.poses[i - 1].pose.position.x;
-            double dy = path1.poses[i].pose.position.y - path1.poses[i - 1].pose.position.y;
-            double dz = path1.poses[i].pose.position.z - path1.poses[i - 1].pose.position.z;
+            double dx = path1.poses[i].pose.position.x - path1.poses[0].pose.position.x;
+            double dy = path1.poses[i].pose.position.y - path1.poses[0].pose.position.y;
+            double dz = path1.poses[i].pose.position.z - path1.poses[0].pose.position.z;
             migration_distance += std::sqrt(dx * dx + dy * dy + dz * dz);
 
-            double ex = path1.poses[i].pose.position.x - path2.poses[i].pose.position.x;
-            double ey = path1.poses[i].pose.position.y - path2.poses[i].pose.position.y;
-            double ez = path1.poses[i].pose.position.z - path2.poses[i].pose.position.z;
+            double ex = path1.poses[i].pose.position.x - path2.poses[0].pose.position.x;
+            double ey = path1.poses[i].pose.position.y - path2.poses[0].pose.position.y;
+            double ez = path1.poses[i].pose.position.z - path2.poses[0].pose.position.z;
             ROS_INFO_STREAM(std::sqrt(ex * ex + ey * ey + ez * ez) / migration_distance);
             error += (std::sqrt(ex * ex + ey * ey + ez * ez) / migration_distance);
 

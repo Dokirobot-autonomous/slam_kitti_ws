@@ -1,2 +1,2 @@
 resolution,leaf_size,sequence,translation_error,rotation_error
-1.0,0.4,0
+1.0,0.4,10,0.0246515,nan
