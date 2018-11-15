@@ -53,6 +53,7 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <nav_msgs/Path.h>
 #include <time.h>
+#include <thread>
 
 using namespace std;
 using namespace pcl;
@@ -1426,6 +1427,7 @@ int main(int argc, char **argv)
 
         if(options.groundtruth || options.all_data)
         {
+
             // reading timesstamps
             str_support = dir_timestamp_groundtruth + "times.txt";
             ifstream timestamps(str_support.c_str());
@@ -1452,6 +1454,7 @@ int main(int argc, char **argv)
             for(int i=0;i<=entries_played;i++){
                 getline(poses, str_support);
             }
+            ROS_INFO_STREAM(entries_played<<","<<str_support);
             publish_groundtruth(groundpose_pub,groundpath_pub,str_support,&header_support);
 
         }
@@ -1575,26 +1578,48 @@ int main(int argc, char **argv)
         }
 
         ++progress;
+        node.setParam("entries_played",(int)entries_played);
+
+//        if(entries_played==0){
+            while(true){
+//                ROS_INFO_STREAM("Wainting for ndt_node first pose");
+                int tmp=1;
+                std::string str="/ndt_mapping_tku/callback_num";
+                node.getParam(str,tmp);
+                if(tmp==entries_played){
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::microseconds(1));
+            }
+//        }
+
+
         entries_played++;
-//        if (entries_played>40){
+
+
+//        if (entries_played>20){
 //            break;
 //        }
 
-        node.setParam("entries_played",(int)entries_played);
-        int first_node_num,last_node_num;
-        node.getParam("first_node_num",first_node_num);
-        node.getParam("last_node_num",last_node_num);
-        for (int in=first_node_num;in<=last_node_num;in++){
-            while(true){
-                std::string str="/ndt_mapping"+std::to_string(in)+"/done_pose_calculation";
-                int done_pose_calculation;
-                node.getParam(str,done_pose_calculation);
-                if(done_pose_calculation==1){
-                    node.setParam(str,0);
-                    break;
-                }
-            }
-        }
+
+
+
+
+
+//        int first_node_num,last_node_num;
+//        node.getParam("first_node_num",first_node_num);
+//        node.getParam("last_node_num",last_node_num);
+//        for (int in=first_node_num;in<=last_node_num;in++){
+//            while(true){
+//                std::string str="/ndt_mapping"+std::to_string(in)+"/done_pose_calculation";
+//                int done_pose_calculation;
+//                node.getParam(str,done_pose_calculation);
+//                if(done_pose_calculation==1){
+//                    node.setParam(str,0);
+//                    break;
+//                }
+//            }
+//        }
 
         if (!options.synchMode)
             loop_rate.sleep();
@@ -1620,4 +1645,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
