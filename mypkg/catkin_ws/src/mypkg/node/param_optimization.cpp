@@ -247,7 +247,9 @@ int main(int argc, char **argv) {
         if (nh.hasParam(str) && exist_kitti_player== 1) break;
         ROS_INFO("waiting for kitti_player nodes");
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     }
+    ROS_INFO_STREAM(__FILE__<<","<<__LINE__);
 
 
     while (true) {
@@ -264,6 +266,7 @@ int main(int argc, char **argv) {
           if (entries_played==ndt_mapping_tku_callbacks){
             break;
           }
+
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -275,6 +278,7 @@ int main(int argc, char **argv) {
     double re = ec.getRotationError();
 
     ROS_INFO("Done error calculation");
+
 
     std::string fname = OUTPUT_FNAME;
     std::ofstream ofs(fname.c_str(), std::ios_base::app);
