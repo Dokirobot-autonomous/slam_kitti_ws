@@ -1,3 +1,2 @@
 resolution,leaf_size,sequence,translation_error,rotation_error
-1.0,0.2,0,inf,1.62641
-1.0,0.2,1,inf,1.82095
+1.0,0.2,0
