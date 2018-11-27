@@ -5,14 +5,14 @@ LAST_SEQUENCE=10
 
 
 #RESOLUTION_ARRAY=(1.0)
-RESOLUTION_ARRAY=(1.0 1.2 1.4)
+RESOLUTION_ARRAY=(1.2 1.4 1.6 1.8 2.2 2.4 2.6 2.8 3.0)
 STEP_SIZE_ARRAY=(0.1)
 #STEP_SIZE_ARRAY=(0.1 0.05 0.15 0.2)
 TRANSFORMATION_EPSILON_ARRAY=(0.01)
 #TRANSFORMATION_EPSILON_ARRAY=(0.01 0.02 0.03)
 MAXIMUM_ITERATIONS_ARRAY=(30)
 #LEAF_SIZE_ARRAY=(0.2)
-LEAF_SIZE_ARRAY=(0.2 0.4 0.5 0.6 0.8)
+LEAF_SIZE_ARRAY=(0.6 0.8)
 MINIMUM_SCAN_RANGE_ARRAY=(5)
 MAXIMUM_SCAN_RANGE_ARRAY=(200)
 MINIMUM_ADD_SCAN_SHIFT_ARRAY=(1)
@@ -51,9 +51,10 @@ echo "MINIMUM_ADD_SCAN_SHIFT,${MINIMUM_ADD_SCAN_SHIFT_ARRAY[@]}" >> ../output/pa
 
 #new terminal
 xterm -e bash -c 'roscore' &
-sleep 1
+sleep 5
 
-
+#xterm -e bash -c 'cd ~/slam_kitti_ws/output/; rosbag record -O subset /groundtruth_pose/pose /ndt_pose_transformed' &
+#sleep 0.5
 
 #rosparam set /first_sequence $FIRST_SEQUENCE
 #rosparam set /last_sequence $LAST_SEQUENCE
@@ -98,6 +99,7 @@ do
                 rosparam set /ndt_mapping_tku/maximum_scan_range $MAXIMUM_SCAN_RANGE
                 rosparam set /ndt_mapping_tku/minimum_add_scan_shift $MINIMUM_ADD_SCAN_SHIFT
 
+		sleep 5
 
                   ## play NDT_Mapping nodes
                   xterm -e bash -c "cd ~/slam_kitti_ws/mypkg/catkin_ws; source devel/setup.bash; roslaunch lidar_localizer ndt_mapping_tku.launch" &
@@ -109,7 +111,7 @@ do
 
                   # play kitti_player
                   if [ $SEQUENCE -lt 10 ] ;then
-                    xterm -e bash -c "cd ~/slam_kitti_ws/mypkg/catkin_ws/; source devel/setup.bash; rosrun kitti_player kitti_player -d ~/dataset/rosbag/Kitti/odometry/dataset/sequence/0${SEQUENCE} --velodyne 1 --grayscale 1 --color 1 --groundtruth 1 --timestamps 1 --frequency 10 /sensor/camera/grayscale/left/image_rect:=/sensor/camera/grayscale/left/image_raw /sensor/camera/grayscale/right/image_rect:=/sensor/camera/grayscale/right/image_raw" &
+                    xterm -e bash -c "cd ~/slam_kitti_ws/mypkg/catkin_ws/; source devel/setup.bash; rosrun kitti_player kitti_player -d ~/dataset/rosbag/Kitti/odometry/dataset/sequence/0${SEQUENCE} --velodyne 1 --grayscale 1 --color 1 --groundtruth 1 --timestamps 1 --frequency 100 /sensor/camera/grayscale/left/image_rect:=/sensor/camera/grayscale/left/image_raw /sensor/camera/grayscale/right/image_rect:=/sensor/camera/grayscale/right/image_raw" &
 sleep 1
                   else
                     xterm -e bash -c "cd ~/slam_kitti_ws/mypkg/catkin_ws/; source devel/setup.bash; rosrun kitti_player kitti_player -d ~/dataset/rosbag/Kitti/odometry/dataset/sequence/${SEQUENCE} --velodyne 1 --grayscale 1 --color 1 --groundtruth 1 --timestamps 1 --frequency 10 /sensor/camera/grayscale/left/image_rect:=/sensor/camera/grayscale/left/image_raw /sensor/camera/grayscale/right/image_rect:=/sensor/camera/grayscale/right/image_raw" &
@@ -128,7 +130,7 @@ sleep 1
                     fi
                     sleep 0.1
                   done
-                  sleep 1
+                  sleep 5
                   # play next sequence
                 done
               # next parameters

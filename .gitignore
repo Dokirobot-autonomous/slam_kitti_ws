@@ -2,6 +2,7 @@
 devel
 build
 cmake-build-debug
+output
 
 # いらないファイル
 ceres-bin

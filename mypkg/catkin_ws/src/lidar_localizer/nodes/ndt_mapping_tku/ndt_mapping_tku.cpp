@@ -618,7 +618,7 @@ int main(int argc, char *argv[])
   g_map_x = G_MAP_X;
   g_map_y = G_MAP_Y;
   g_map_z = G_MAP_Z;
-  g_map_cellsize = G_MAP_CELLSIZE;
+ g_map_cellsize = G_MAP_CELLSIZE;
   // map center
   g_map_center_x = g_ini_x;
   g_map_center_y = g_ini_y;
@@ -634,7 +634,21 @@ int main(int argc, char *argv[])
   q_local_to_global.setRPY(0.0, 0.0, g_map_rotation);
   tf_local_to_global =
       (tl_local_to_global * rot_z_local_to_global * rot_y_local_to_global * rot_x_local_to_global).matrix();
-//std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+  //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+
+
+  /* get Parameters */
+  float resolution,transformation_epsilon,leaf_size;
+  if(!private_nh.getParam("resolution",resolution)){
+    g_map_cellsize=resolution;
+  }
+  if(!private_nh.getParam("leaf_size",leaf_size)){
+    leaf_size=0.5;
+  }
+
+  g_map_cellsize=resolution;
+
+
 
   /*initialize(clear) NDmap data*/
   NDmap = initialize_NDmap();
