@@ -11,7 +11,7 @@
   </include>
 
   <!-- depth estimator tracklets node -->
-  
+
   <arg name="config_depth_estimator" default="$(find demo_keyframe_bundle_adjustment_meta)/res/mono_lidar_fusion_parameters.yaml"/>
   <arg name="config_tracklets_depth" default="$(find demo_keyframe_bundle_adjustment_meta)/res/config_tracklets_depth_ros_tool.yaml"/>
   <!-- <node pkg="nodelet" type="nodelet" name="tracklets_depth_nodelet" args="load tracklets_depth_ros_tool/TrackletDepthNodelet $(arg nodelet_manager_name)" output="screen" required="true"> -->
@@ -31,8 +31,8 @@
 
   <!-- This connects trres estimate_prior and estimate in case you wanted to calculate a transform between the two of them. -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="transform_local_estimate_prior" args="0. 0. 0. 0. 0. 0. estimate/local_cs estimate_prior/local_cs" required="true"/>
-  <node pkg="tf2_ros" type="static_transform_publisher" name="transform_local_cs" args="0. 0. 0. 0. 0. 0. estimate/local_cs local_cs" required="true"/>
-  
+  <node pkg="tf2_ros" type="static_transform_publisher" name="transform_local_cs_2_limo" args="0. 0. 0. -1.57 -1.57 3.14 local_cs estimate/local_cs_vehicle" required="true"/>
+
   <!-- Remapping of topics for gt -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="transform_vehicle_camera_vehicle_gt" args=" 0 1.35 -1.08 1.5707963 -1.5707963 0 sensor/camera gt/vehicle" required="true"/>
   <node pkg="tf2_ros" type="static_transform_publisher" name="transform_local_cs_camera_gt" args="0 1.35 -1.08 1.5707963 -1.5707963 0 local_cs gt/local_cs_vehicle" required="true"/>
@@ -55,7 +55,7 @@
   <include file="$(find demo_keyframe_bundle_adjustment_meta)/launch/keyframe_ba_monolid.launch">
     <arg name="prior_vehicle_frame" value="estimate_prior/vehicle"  if="false"/>
   </include>
-  
+
   <!-- play rosbag with clock -->
   <!-- /mrtstorage/datasets/kitti/odometry/odometry_rosbags/gray/00.bag"-->
 </launch>

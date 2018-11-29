@@ -2,8 +2,8 @@
 
 	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find orb_slam_ros)/orb_viz.rviz" output="log"/>
 
- 	<node pkg="orb_slam_ros" type="stereo_node" name="orb_slam_ros"  
-        args="/home/ohashi/localization_kitti_ws/withous_catkin/orb_slam_ros/Vocabulary/ORBvoc.txt /home/ohashi/localization_kitti_ws/withous_catkin/orb_slam_ros/config/stereo.yaml" cwd="node" output="screen">
+ 	<node pkg="orb_slam_ros" type="stereo_node" name="orb_slam_ros"
+        args="/home/ohashi/slam_kitti_ws/methods/orb_slam/orb_slam_ros/Vocabulary/ORBvoc.txt /home/ohashi/slam_kitti_ws/methods/orb_slam/orb_slam_ros/config/stereo.yaml" cwd="node" output="screen">
         <remap from="/camera/left/image_raw" to="/sensor/camera/grayscale/left/image_raw"/>
         <remap from="/camera/right/image_raw" to="/sensor/camera/grayscale/right/image_raw"/>
         </node>

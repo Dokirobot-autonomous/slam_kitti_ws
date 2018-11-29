@@ -757,7 +757,11 @@ int main(int argc, char **argv)
     sensor_msgs::Imu        ros_msgImu;
 
     if(options.synchMode){
+
         ros::Subscriber sub = node.subscribe("/kitti_player/synch", 1, synchCallback);    // refs #600
+//        ros::Subscriber sub = node.subscribe("/kitti_player/synch", 1, synchCallback);    // refs #600
+//        ros::Subscriber sub = node.subscribe("/kitti_player/synch", 1, synchCallback);    // refs #600
+//        ros::Subscriber sub = node.subscribe("/kitti_player/synch", 1, synchCallback);    // refs #600
     }
 
     if (vm.count("help"))
@@ -1589,18 +1593,17 @@ int main(int argc, char **argv)
         ++progress;
         node.setParam("entries_played",(int)entries_played);
 
-//        if(entries_played==0){
-//            while(true){
-//                ROS_INFO_STREAM("Wainting for ndt_node first pose");
-//                int tmp=1;
-//                std::string str="/ndt_mapping_tku/callback_num";
-//                node.getParam(str,tmp);
-//                if(tmp==entries_played){
-//                    break;
-//                }
-//                std::this_thread::sleep_for(std::chrono::microseconds(1));
+            while(true){
+                ROS_INFO_STREAM("Wainting for ndt_node first pose");
+                int tmp=1;
+                std::string str="/ndt_mapping_tku/callback_num";
+                node.getParam(str,tmp);
+                if(tmp==entries_played){
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::microseconds(1));
 //            }
-//        }
+        }
 
 
         entries_played++;
