@@ -24,6 +24,8 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <chrono>
+#include <time.h>
 #include <ros/ros.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -46,6 +48,7 @@
 #include <sensor_msgs/NavSatFix.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <stereo_msgs/DisparityImage.h>
+#include <rosgraph_msgs/Clock.h>
 #include <std_msgs/Bool.h>
 #include <tf/LinearMath/Transform.h>
 #include <tf/transform_broadcaster.h>
@@ -667,6 +670,9 @@ int main(int argc, char **argv)
     string dir_image02          ;
     string full_filename_image02;
     string dir_timestamp_image02;
+    string dir_image02_label          ;
+    string full_filename_image02_label;
+    string dir_timestamp_image02_label;
     string dir_image03          ;
     string full_filename_image03;
     string dir_timestamp_image03;
@@ -688,10 +694,15 @@ int main(int argc, char **argv)
     cv::Mat cv_image00;
     cv::Mat cv_image01;
     cv::Mat cv_image02;
+    cv::Mat cv_image02_label;
     cv::Mat cv_image03;
     cv::Mat cv_image04;
     cv::Mat cv_disparities;
     std_msgs::Header header_support;
+
+    rosgraph_msgs::Clock clock_msgs;
+    ros::Publisher pub_clock;
+    pub_clock=node.advertise<rosgraph_msgs::Clock>("clock",1000);
 
     image_transport::ImageTransport it(node);
 /*
@@ -700,18 +711,20 @@ int main(int argc, char **argv)
     image_transport::CameraPublisher pub02 = it.advertiseCamera("sensor/camera/color/left/image_rect", 1);
     image_transport::CameraPublisher pub03 = it.advertiseCamera("sensor/camera/color/right/image_rect", 1);
 */
-    image_transport::CameraPublisher pub00,pub01,pub02,pub03;
+    image_transport::CameraPublisher pub00,pub01,pub02,pub02_label,pub03;
     if(options.grayscale){
         pub00= it.advertiseCamera("sensor/camera/grayscale/left/image_rect", 1);
         pub01 = it.advertiseCamera("sensor/camera/grayscale/right/image_rect", 1);
     }
     if(options.color) {
         pub02 = it.advertiseCamera("sensor/camera/color/left/image_rect", 1);
+        pub02_label = it.advertiseCamera("sensor/camera/color_label/left/image_rect", 1);
         pub03 = it.advertiseCamera("sensor/camera/color/right/image_rect", 1);
     }
     sensor_msgs::Image ros_msg00;
     sensor_msgs::Image ros_msg01;
     sensor_msgs::Image ros_msg02;
+    sensor_msgs::Image ros_msg02_label;
     sensor_msgs::Image ros_msg03;
 
 
@@ -805,6 +818,7 @@ int main(int argc, char **argv)
     dir_image00          = options.path;
     dir_image01          = options.path;
     dir_image02          = options.path;
+    dir_image02_label          = options.path;
     dir_image03          = options.path;
     dir_image04          = options.path;
     dir_oxts             = options.path;
@@ -816,6 +830,7 @@ int main(int argc, char **argv)
     (*(options.path.end() - 1) != '/' ? dir_image00         = options.path + "/image_0/"        : dir_image00         = options.path + "image_0/");
     (*(options.path.end() - 1) != '/' ? dir_image01         = options.path + "/image_1/"        : dir_image01         = options.path + "image_1/");
     (*(options.path.end() - 1) != '/' ? dir_image02         = options.path + "/image_2/"        : dir_image02         = options.path + "image_2/");
+    (*(options.path.end() - 1) != '/' ? dir_image02_label         = options.path + "/image_2_label/"        : dir_image02_label         = options.path + "image_2_label/");
     (*(options.path.end() - 1) != '/' ? dir_image03         = options.path + "/image_3/"        : dir_image03         = options.path + "image_3/");
     (*(options.path.end() - 1) != '/' ? dir_image04         = options.path + "/disparities/"          : dir_image04         = options.path + "disparities/");
     (*(options.path.end() - 1) != '/' ? dir_oxts            = options.path + "/oxts/data/"            : dir_oxts            = options.path + "oxts/data/");
@@ -825,6 +840,7 @@ int main(int argc, char **argv)
     (*(options.path.end() - 1) != '/' ? dir_timestamp_image00    = options.path + "/"            : dir_timestamp_image00   = options.path + "");
     (*(options.path.end() - 1) != '/' ? dir_timestamp_image01    = options.path + "/"            : dir_timestamp_image01   = options.path + "");
     (*(options.path.end() - 1) != '/' ? dir_timestamp_image02    = options.path + "/"            : dir_timestamp_image02   = options.path + "");
+    (*(options.path.end() - 1) != '/' ? dir_timestamp_image02_label    = options.path + "/"            : dir_timestamp_image02_label   = options.path + "");
     (*(options.path.end() - 1) != '/' ? dir_timestamp_image03    = options.path + "/"            : dir_timestamp_image03   = options.path + "");
     (*(options.path.end() - 1) != '/' ? dir_timestamp_oxts       = options.path + "/oxts/"                : dir_timestamp_oxts      = options.path + "oxts/");
     (*(options.path.end() - 1) != '/' ? dir_timestamp_velodyne   = options.path + "/"     : dir_timestamp_velodyne  = options.path + "");
@@ -835,11 +851,13 @@ int main(int argc, char **argv)
         (options.all_data       && (   (opendir(dir_image00.c_str())            == NULL) ||
                                        (opendir(dir_image01.c_str())            == NULL) ||
                                        (opendir(dir_image02.c_str())            == NULL) ||
+                                       (opendir(dir_image02_label.c_str())            == NULL) ||
                                        (opendir(dir_image03.c_str())            == NULL) ||
                                        (opendir(dir_oxts.c_str())               == NULL) ||
                                        (opendir(dir_velodyne_points.c_str())    == NULL)))
         ||
         (options.color          && (   (opendir(dir_image02.c_str())            == NULL) ||
+                                       (opendir(dir_image03.c_str())            == NULL) ||
                                        (opendir(dir_image03.c_str())            == NULL)))
         ||
         (options.grayscale      && (   (opendir(dir_image00.c_str())            == NULL) ||
@@ -858,6 +876,7 @@ int main(int argc, char **argv)
         (options.timestamps     && (   (opendir(dir_timestamp_image00.c_str())      == NULL) ||
                                        (opendir(dir_timestamp_image01.c_str())      == NULL) ||
                                        (opendir(dir_timestamp_image02.c_str())      == NULL) ||
+                                       (opendir(dir_timestamp_image02_label.c_str())      == NULL) ||
                                        (opendir(dir_timestamp_image03.c_str())      == NULL) ||
                                        (opendir(dir_timestamp_oxts.c_str())         == NULL) ||
                                        (opendir(dir_timestamp_velodyne.c_str())         == NULL) ||
@@ -1172,25 +1191,30 @@ int main(int argc, char **argv)
     ros::Publisher publisher_GT_RTK;
     //publisher_GT_RTK = node.advertise<visualization_msgs::MarkerArray> ("/kitti_player/GT_RTK", 1);
 
+    clock_t loop_start, loop_end;
+    double exe_time;
+
     // This is the main KITTI_PLAYER Loop
     do
     {
         ROS_INFO_STREAM("entries_played: "<<entries_played);
         // this refs #600 synchMode
-        if (options.synchMode)
-        {
-            if (waitSynch == true)
-            {
-                //ROS_DEBUG_STREAM("Waiting for synch...");
-                ros::spinOnce();
-                continue;
-            }
-            else
-            {
-                ROS_DEBUG_STREAM("Run after received synch...");
-                waitSynch = true;
-            }
-        }
+//        if (options.synchMode)
+//        {
+//            if (waitSynch == true)
+//            {
+//                //ROS_DEBUG_STREAM("Waiting for synch...");
+//                ros::spinOnce();
+//                continue;
+//            }
+//            else
+//            {
+//                ROS_DEBUG_STREAM("Run after received synch...");
+//                waitSynch = true;
+//            }
+//        }
+
+        loop_start = clock();
 
         // single timestamp for all published stuff
         Time current_timestamp = ros::Time::now();
@@ -1245,13 +1269,15 @@ int main(int argc, char **argv)
         if (options.color || options.all_data)
         {
             full_filename_image02 = dir_image02 + boost::str(boost::format("%06d") % entries_played ) + ".png";
+            full_filename_image02_label = dir_image02_label + boost::str(boost::format("%06d") % entries_played ) + ".png";
             full_filename_image03 = dir_image03 + boost::str(boost::format("%06d") % entries_played ) + ".png";
             ROS_DEBUG_STREAM ( full_filename_image02 << endl << full_filename_image03 << endl << endl);
 
             cv_image02 = cv::imread(full_filename_image02, CV_LOAD_IMAGE_UNCHANGED);
+            cv_image02_label = cv::imread(full_filename_image02_label, CV_LOAD_IMAGE_UNCHANGED);
             cv_image03 = cv::imread(full_filename_image03, CV_LOAD_IMAGE_UNCHANGED);
 
-            if ( (cv_image02.data == NULL) || (cv_image03.data == NULL) )
+            if ( (cv_image02.data == NULL) || (cv_image02_label.data == NULL) || (cv_image03.data == NULL) )
             {
                 ROS_ERROR_STREAM("Error reading color images (02 & 03)");
                 //ROS_ERROR_STREAM(full_filename_image02 << endl << full_filename_image03);
@@ -1296,6 +1322,30 @@ int main(int argc, char **argv)
 
             if (!options.timestamps)
             {
+                cv_bridge_img.header.stamp = current_timestamp ;
+                ros_msg02_label.header.stamp = ros_cameraInfoMsg_camera02.header.stamp = cv_bridge_img.header.stamp;
+            }
+            else
+            {
+
+                str_support = dir_timestamp_image02_label + "times.txt";
+                ifstream timestamps(str_support.c_str());
+                if (!timestamps.is_open())
+                {
+                    //ROS_ERROR_STREAM("Fail to open " << timestamps);
+                    node.shutdown();
+                    return -1;
+                }
+                timestamps.seekg(13 * entries_played);
+                getline(timestamps, str_support);
+                cv_bridge_img.header.stamp = parseTime(str_support).stamp;
+                ros_msg02_label.header.stamp = ros_cameraInfoMsg_camera02.header.stamp = cv_bridge_img.header.stamp;
+            }
+            cv_bridge_img.image = cv_image02_label;
+            cv_bridge_img.toImageMsg(ros_msg02_label);
+
+            if (!options.timestamps)
+            {
                 cv_bridge_img.header.stamp = current_timestamp;
                 ros_msg03.header.stamp = ros_cameraInfoMsg_camera03.header.stamp = cv_bridge_img.header.stamp;
             }
@@ -1320,6 +1370,7 @@ int main(int argc, char **argv)
             cv_bridge_img.toImageMsg(ros_msg03);
 
             pub02.publish(ros_msg02, ros_cameraInfoMsg_camera02);
+            pub02_label.publish(ros_msg02_label, ros_cameraInfoMsg_camera02);
             pub03.publish(ros_msg03, ros_cameraInfoMsg_camera03);
 
         }
@@ -1469,7 +1520,6 @@ int main(int argc, char **argv)
                     break;
                 }
             }
-
         }
 
         if (options.gps || options.all_data)
@@ -1590,20 +1640,24 @@ int main(int argc, char **argv)
 
         }
 
+        clock_msgs.clock.sec=header_support.stamp.sec;
+        clock_msgs.clock.nsec=header_support.stamp.nsec;
+        pub_clock.publish(clock_msgs);
+
         ++progress;
         node.setParam("entries_played",(int)entries_played);
 
-            while(true){
-                ROS_INFO_STREAM("Wainting for ndt_node first pose");
-                int tmp=1;
-                std::string str="/ndt_mapping_tku/callback_num";
-                node.getParam(str,tmp);
-                if(tmp==entries_played){
-                    break;
-                }
-                std::this_thread::sleep_for(std::chrono::microseconds(1));
-//            }
-        }
+//            while(true){
+//                ROS_INFO_STREAM("Wainting for ndt_node first pose");
+//                int tmp=1;
+//                std::string str="/ndt_mapping_tku/callback_num";
+//                node.getParam(str,tmp);
+//                if(tmp==entries_played){
+//                    break;
+//                }
+//                std::this_thread::sleep_for(std::chrono::microseconds(1));
+////            }
+//        }
 
 
         entries_played++;
@@ -1633,8 +1687,18 @@ int main(int argc, char **argv)
 //            }
 //        }
 
-        if (!options.synchMode)
-            loop_rate.sleep();
+        loop_end= clock();
+        exe_time = (double)(loop_end-loop_start)/CLOCKS_PER_SEC;
+
+
+        if (!options.synchMode){
+            double period=1.0/(double)options.frequency;
+            double rest=period-exe_time;
+            if(rest>0){
+                std::this_thread::sleep_for(std::chrono::microseconds((int)(rest*1000000.0)));
+            }
+//            loop_rate.sleep();
+        }
     }
     while (entries_played <= total_entries - 1 && ros::ok());
 

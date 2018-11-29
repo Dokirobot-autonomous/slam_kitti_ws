@@ -18,11 +18,11 @@
 
 bool USE_SPTAM=false;
 bool USE_LIMO=true;
-bool USE_ORB=false;
-bool USE_NDT=false;
+bool USE_ORB=true;
+bool USE_NDT=true;
 
 #define POSE_NAME_SPTAM "sptam/robot/pose"
-#define POSE_NAME_LIMO "/estimate/active_path"
+#define POSE_NAME_LIMO "/estimate/complete_path"
 #define POSE_NAME_ORB "/camera_pose"
 #define POSE_NAME_NDT "/current_pose"
 #define POSE_NAME_GROUNDTRUTH "/groundtruth_pose/pose"
@@ -269,21 +269,42 @@ void SlamFusion::callback_limo_path(const nav_msgs::Path::ConstPtr &msg) {
 
     std::string str = POSE_NAME_LIMO;
     ROS_DEBUG_STREAM("callback " << str);
+    if(paths[1].poses.empty()){
+        for(int i=0;i<msg->poses.size();i++){
+            /* Poseの確認 */
+            geometry_msgs::PoseStamped pose_transformed;
+            try {
+                listener.transformPose("local_cs",msg->poses[i].header.stamp,msg->poses[i],msg->poses[i].header.frame_id,pose_transformed);
+            }
+            catch (tf::TransformException ex) {
+                ROS_ERROR("%s", ex.what());
+                ros::Duration(1.0).sleep();
+            }
+            ROS_DEBUG_STREAM("limo local_cs pose \n"<<pose_transformed);
+
+            paths[1].poses.push_back(pose_transformed);
+
+        }
+        paths[1].header=msg->header;
+    }
+    else{
+        /* Poseの確認 */
+        geometry_msgs::PoseStamped pose_transformed;
+        try {
+            listener.transformPose("local_cs",msg->header.stamp,msg->poses.back(),msg->header.frame_id,pose_transformed);
+        }
+        catch (tf::TransformException ex) {
+            ROS_ERROR("%s", ex.what());
+            ros::Duration(1.0).sleep();
+        }
+        ROS_DEBUG_STREAM("limo local_cs pose \n"<<pose_transformed);
+
+        paths[1].poses.push_back(pose_transformed);
+        paths[1].header=pose_transformed.header;
+    }
+
     ROS_DEBUG_STREAM("size of pose in limo_path: " << msg->poses.size());
 
-    /* Poseの確認 */
-    geometry_msgs::PoseStamped pose_transformed;
-    try {
-        listener.transformPose("local_cs",msg->header.stamp,msg->poses.back(),msg->header.frame_id,pose_transformed);
-    }
-    catch (tf::TransformException ex) {
-        ROS_ERROR("%s", ex.what());
-        ros::Duration(1.0).sleep();
-    }
-    ROS_DEBUG_STREAM("limo local_cs pose \n"<<pose_transformed);
-
-    paths[1].poses.push_back(pose_transformed);
-    paths[1].header=pose_transformed.header;
 
     get_latest_pose_[1] = true;
     if (existAllPose()) {
