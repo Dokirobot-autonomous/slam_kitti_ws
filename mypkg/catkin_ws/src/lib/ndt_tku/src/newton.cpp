@@ -290,15 +290,15 @@ double adjust3d(PointPtr scan, int num, PosturePtr initial, int target)
     // get_NDないでエラー発生1
     // pのeuclidianが変
     // -5.92942e+08,-8.74006e+08,-3.12235e+07
-    //std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
+//std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
     //if(i<=162){
     //  std::cout<<p.x<<","<<p.y<<","<<p.z<<std::endl;
     //}
     if (!get_ND(nd_map, &p, nd, target)){
-      //std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
+  //std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
       continue;
     }
-    //std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
+//std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
 
     work = (double *)sc_d;
     for (m = 0; m < 3; m++)
@@ -309,7 +309,7 @@ double adjust3d(PointPtr scan, int num, PosturePtr initial, int target)
         work += 3;
       }
     }
-    //std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
+//std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
 
     work = (double *)sc_dd;
     for (n = 0; n < 3; n++) {
@@ -330,6 +330,7 @@ double adjust3d(PointPtr scan, int num, PosturePtr initial, int target)
         esum += calc_summand3d(&p, nd[j], pose, g, hH, qd3, dist);
         add_matrix6d(Hsumh, hH, Hsumh);
 
+        //ヤコビ行列?
         //	  dist =1;
         gsum[0] += g[0];                //*nd[j]->w;
         gsum[1] += g[1];                //*nd[j]->w;
@@ -374,6 +375,218 @@ double adjust3d(PointPtr scan, int num, PosturePtr initial, int target)
   }
   return esum;
 }
+
+
+double adjust3d(PointPtr scan, int num, PosturePtr initial, int target, double *hessian_inv)
+{
+  double gsum[6], Hsum[6][6], Hsumh[6][6], Hinv[6][6], g[6], H[6][6], hH[6][6];
+  double sc[3][3], sc_d[3][3][3], sc_dd[3][3][3][3];
+  double *work;
+  double esum = 0, gnum = 0;
+  NDPtr nd[8];
+  NDMapPtr nd_map;
+  int i, j, n, m, k, layer;
+  double x, y, z;
+  PosturePtr pose;
+  Point p;
+  PointPtr scanptr;
+  int inc;
+  int ndmode;
+  double dist;
+
+  /*initialize*/
+  gsum[0] = 0;
+  gsum[1] = 0;
+  gsum[2] = 0;
+  gsum[3] = 0;
+  gsum[4] = 0;
+  gsum[5] = 0;
+  j = 0;
+  zero_matrix6d(Hsum);
+  zero_matrix6d(Hsumh);
+  pose = initial;
+
+  set_sincos(pose->theta, pose->theta2, pose->theta3, sc_d);
+  set_sincos(pose->theta + E_THETA, pose->theta2, pose->theta3, sc_dd[0]);
+  set_sincos(pose->theta, pose->theta2 + E_THETA, pose->theta3, sc_dd[1]);
+  set_sincos(pose->theta, pose->theta2, pose->theta3 + E_THETA, sc_dd[2]);
+
+  set_sincos2(pose->theta, pose->theta2, pose->theta3, sc);
+
+  qd3[0][0] = 1;
+  qd3[0][1] = 0;
+  qd3[0][2] = 0;
+
+  qd3[1][0] = 0;
+  qd3[1][1] = 1;
+  qd3[1][2] = 0;
+
+  qd3[2][0] = 0;
+  qd3[2][1] = 0;
+  qd3[2][2] = 1;
+  for (n = 0; n < 6; n++)
+  {
+    for (m = 0; m < 6; m++)
+    {
+      for (k = 0; k < 3; k++)
+      {
+        qdd3[n][m][k] = 0;
+      }
+    }
+  }
+
+  // using voxel grid filter
+  switch (target)
+  {
+    case 3:
+      inc = 1;
+          ndmode = 0;
+          break;
+    case 2:
+      inc = 1;
+          ndmode = 1;
+          break;
+    case 1:
+      inc = 1;
+          ndmode = 0;
+          break;
+    default:
+      inc = 1;
+          ndmode = 0;
+          break;
+  }
+
+  //#endif
+
+  scanptr = scan;
+
+  // case of voxel grid filter used
+  //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+  for (i = 0; i < num; i += inc)
+  {
+    x = scanptr->x;
+    y = scanptr->y;
+    z = scanptr->z;
+    dist = 1;
+    scanptr += inc;
+
+    p.x = x * sc[0][0] + y * sc[0][1] + z * sc[0][2] + pose->x;
+    p.y = x * sc[1][0] + y * sc[1][1] + z * sc[1][2] + pose->y;
+    p.z = x * sc[2][0] + y * sc[2][1] + z * sc[2][2] + pose->z;
+
+    if (ndmode == 1)
+      layer = 1;  // layer_select;
+    if (ndmode == 0)
+      layer = 0;  // layer_select;
+    nd_map = NDmap;
+
+    while (layer > 0)
+    {
+      if (nd_map->next)
+        nd_map = nd_map->next;
+      layer--;
+    }
+
+    // get_NDないでエラー発生1
+    // pのeuclidianが変
+    // -5.92942e+08,-8.74006e+08,-3.12235e+07
+//std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
+    //if(i<=162){
+    //  std::cout<<p.x<<","<<p.y<<","<<p.z<<std::endl;
+    //}
+    if (!get_ND(nd_map, &p, nd, target)){
+  //std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
+      continue;
+    }
+//std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
+
+    work = (double *)sc_d;
+    for (m = 0; m < 3; m++)
+    {
+      for (k = 0; k < 3; k++)
+      {
+        qd3[m + 3][k] = x * (*work) + y * (*(work + 1)) + z * (*(work + 2));
+        work += 3;
+      }
+    }
+//std::cout<<i<<","<<__FILE__<<","<<__LINE__<<std::endl;
+
+    work = (double *)sc_dd;
+    for (n = 0; n < 3; n++) {
+      for (m = 0; m < 3; m++) {
+        for (k = 0; k < 3; k++) {
+          qdd3[n + 3][m + 3][k] = (*work * x + *(work + 1) * y + *(work + 2) * z - qd3[m + 3][k]) / E_THETA;
+          work += 3;
+        }
+      }
+    }
+    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+
+    if (nd[j])
+    {
+      if (nd[j]->num > 10 && nd[j]->sign == 1)
+      {
+        //	double e;
+        esum += calc_summand3d(&p, nd[j], pose, g, hH, qd3, dist);
+        add_matrix6d(Hsumh, hH, Hsumh);
+
+        //ヤコビ行列?
+        //	  dist =1;
+        gsum[0] += g[0];                //*nd[j]->w;
+        gsum[1] += g[1];                //*nd[j]->w;
+        gsum[2] += g[2] + pose->z * 0;  //*nd[j]->w;
+        gsum[3] += g[3];                //*nd[j]->w;
+        gsum[4] += g[4];                //+(pose->theta2-(0.0))*1;//*nd[j]->w;
+        gsum[5] += g[5];                //*nd[j]->w;
+        gnum += 1;                      // nd[j]->w;
+      }
+    }
+  }
+  //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+
+  if (gnum > 1)
+  {
+    identity_matrix6d(H);
+    H[0][0] = H[0][0] / (gnum * gnum * 1000.001);
+    H[1][1] = H[1][1] / (gnum * gnum * 1000.001);
+    H[2][2] = H[2][2] / (gnum * gnum * 1000.001);
+    H[3][3] = H[3][3] / (gnum * gnum * 0.001);
+    H[4][4] = H[4][4] / (gnum * gnum * 0.001);
+    H[5][5] = H[5][5] / (gnum * gnum * 0.001);
+
+    add_matrix6d(Hsumh, H, Hsumh);
+
+    ginverse_matrix6d(Hsumh, Hinv);
+    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+
+
+    pose->x -= (Hinv[0][0] * gsum[0] + Hinv[0][1] * gsum[1] + Hinv[0][2] * gsum[2] + Hinv[0][3] * gsum[3] +
+                Hinv[0][4] * gsum[4] + Hinv[0][5] * gsum[5]);
+    pose->y -= (Hinv[1][0] * gsum[0] + Hinv[1][1] * gsum[1] + Hinv[1][2] * gsum[2] + Hinv[1][3] * gsum[3] +
+                Hinv[1][4] * gsum[4] + Hinv[1][5] * gsum[5]);
+    pose->z -= (Hinv[2][0] * gsum[0] + Hinv[2][1] * gsum[1] + Hinv[2][2] * gsum[2] + Hinv[2][3] * gsum[3] +
+                Hinv[2][4] * gsum[4] + Hinv[2][5] * gsum[5]);
+    pose->theta -= (Hinv[3][0] * gsum[0] + Hinv[3][1] * gsum[1] + Hinv[3][2] * gsum[2] + Hinv[3][3] * gsum[3] +
+                    Hinv[3][4] * gsum[4] + Hinv[3][5] * gsum[5]);
+    pose->theta2 -= (Hinv[4][0] * gsum[0] + Hinv[4][1] * gsum[1] + Hinv[4][2] * gsum[2] + Hinv[4][3] * gsum[3] +
+                     Hinv[4][4] * gsum[4] + Hinv[4][5] * gsum[5]);
+    pose->theta3 -= (Hinv[5][0] * gsum[0] + Hinv[5][1] * gsum[1] + Hinv[5][2] * gsum[2] + Hinv[5][3] * gsum[3] +
+                     Hinv[5][4] * gsum[4] + Hinv[5][5] * gsum[5]);
+  }
+
+  for(int i=0;i<6;i++){
+    for(int j=0;j<6;j++){
+	std::cout<<Hinv[i][j]<<"\t";
+      *(hessian_inv+i*6+j)=Hinv[i][j];
+    }
+	std::cout<<std::endl;
+  }
+	std::cout<<std::endl;
+
+
+  return esum;
+}
+
 
 void set_sincos2(double a, double b, double g, double sc[3][3])
 {

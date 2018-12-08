@@ -59,18 +59,22 @@ SlamDataPub::SlamDataPub(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *
 
 void SlamDataPub::TrackingDataPub()
 {
-    geometry_msgs::PoseStamped camPose2Ground;  
-    geometry_msgs::PoseStamped vehiclePose2Ground;  
+    geometry_msgs::PoseStamped camPose2Ground;
+    geometry_msgs::PoseWithCovarianceStamped camPoseWithCov2Ground;
+    geometry_msgs::PoseStamped vehiclePose2Ground;
+
     nav_msgs::Path cameraPath, vehiclePath;
     while(1)
     { 
-	  if(mbGetNewCamPose)
+	  if(mbGetNewCamPose && mbGetNewCamPoseWithCov)
 	  {
 	      GetCurrentROSCameraMatrix(camPose2Ground);
+		  GetCurrentROSCameraWithCovarianceMatrix(camPoseWithCov2Ground);
 	      GetCurrentROSVehicleMatrix(vehiclePose2Ground);
 	      GetCurrentROSTrajectories(cameraPath, vehiclePath);
-	      CamPose_pub_.publish(camPose2Ground);  
-	      VehiclePose_pub_.publish(vehiclePose2Ground);
+	      CamPose_pub_.publish(camPose2Ground);
+		  CamPoseWithCov_pub_.publish(camPoseWithCov2Ground);
+		  VehiclePose_pub_.publish(vehiclePose2Ground);
 	      CamPath_pub_.publish(cameraPath);   // KeyFrames
 	      VehiclePath_pub_.publish(vehiclePath);
 	      
@@ -145,6 +149,7 @@ void SlamDataPub::Run()
     mbStopped = false;
 
     CamPose_pub_ = nh.advertise<geometry_msgs::PoseStamped >("camera_pose",1);
+    CamPoseWithCov_pub_=nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose_with_covariance",1);
     VehiclePose_pub_ = nh.advertise<geometry_msgs::PoseStamped >("vehicle_pose",1);
     CamPath_pub_ = nh.advertise<nav_msgs::Path>("camera_path",1);
     VehiclePath_pub_ = nh.advertise<nav_msgs::Path>("vehicle_path",1);
@@ -232,6 +237,14 @@ void SlamDataPub::SetCurrentCameraPose(const cv::Mat &Tcw)
     mbGetNewCamPose = true;
 }
 
+void SlamDataPub::SetCurrentCameraPoseCovariance(const cv::Mat &Cov)
+{
+	unique_lock<mutex> lock(mMutexCamera);
+	mCameraPoseCovariance = Cov.clone();
+	mbGetNewCamPoseWithCov = true;
+}
+
+
 void SlamDataPub::GetCurrentROSCameraMatrix(geometry_msgs::PoseStamped &cam_pose)
 {
       if(!mCameraPose.empty())
@@ -264,6 +277,69 @@ void SlamDataPub::GetCurrentROSCameraMatrix(geometry_msgs::PoseStamped &cam_pose
 	  mbGetNewCamPose = false;
       }
       
+}
+
+void SlamDataPub::GetCurrentROSCameraWithCovarianceMatrix(geometry_msgs::PoseWithCovarianceStamped &cam_pose_with_cov)
+{
+	if(!mCameraPose.empty() && !mCameraPoseCovariance.empty())
+	{
+		Eigen::Matrix4f cam_pose2firstcam;
+		Eigen::Matrix4f cam_pose2ground;
+		{
+			unique_lock<mutex> lock(mMutexCamera);
+			cv2eigen(mCameraPose.inv(),cam_pose2firstcam);
+			cam_pose2ground = mTrans_cam2ground * cam_pose2firstcam;
+			{
+				mCam2GroundNow_T = cam_pose2ground;
+			}
+		}
+
+		cam_pose_with_cov.pose.pose.position.x = cam_pose2ground(0,3);
+		cam_pose_with_cov.pose.pose.position.y  = cam_pose2ground(1,3);
+		cam_pose_with_cov.pose.pose.position.z  = cam_pose2ground(2,3);
+
+		Eigen::Matrix3f Rwc = cam_pose2ground.block<3,3>(0,0);
+		Eigen::Quaternionf q(Rwc);
+		cam_pose_with_cov.pose.pose.orientation.x = q.x();
+		cam_pose_with_cov.pose.pose.orientation.y = q.y();
+		cam_pose_with_cov.pose.pose.orientation.z = q.z();
+		cam_pose_with_cov.pose.pose.orientation.w = q.w();
+
+
+//		Eigen::Matrix<float,6,6> cam_pose_cov2firstcam;
+//        Eigen::Matrix<float,6,6> cam_pose_cov2ground;
+//		{
+//			unique_lock<mutex> lock(mMutexCamera);
+//			cv2eigen(mCameraPoseCovariance,cam_pose_cov2firstcam);
+//			cam_pose_cov2ground = cam_pose_cov2firstcam;
+////			cam_pose2ground = mTrans_cam2ground * cam_pose_cov2firstcam;
+//			{
+//				mCam2GroundNow_T = cam_pose_cov2ground;
+//			}
+//		}
+//
+//		for(int i=0;i<6;i++){
+//			for(int j=0;j<6;j++){
+//				cam_pose_with_cov.pose.covariance[i*6+j]=cam_pose_cov2ground(i,j);
+//			}
+//		}
+
+        for(int i=0;i<6;i++){
+            for(int j=0;j<6;j++){
+                cam_pose_with_cov.pose.covariance[i*6+j]=mCameraPoseCovariance.at<float>(j,i);
+            }
+        }
+
+
+		cam_pose_with_cov.header.frame_id = "orb_map";
+		cam_pose_with_cov.header.stamp = ros::Time::now();
+
+		mbGetNewCamPoseWithCov = false;
+	}
+
+
+
+
 }
 
 void SlamDataPub::GetCurrentROSVehicleMatrix(geometry_msgs::PoseStamped &vehicle_pose)

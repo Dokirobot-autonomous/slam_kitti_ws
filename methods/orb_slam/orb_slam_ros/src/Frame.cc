@@ -271,6 +271,12 @@ void Frame::UpdatePoseMatrices()
     mOw = -mRcw.t()*mtcw;
 }
 
+// add covarinace operator
+void Frame::SetCovariance(cv::Mat cov)
+{
+    covariance = cov.clone();
+}
+
 bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
 {
     pMP->mbTrackInView = false;

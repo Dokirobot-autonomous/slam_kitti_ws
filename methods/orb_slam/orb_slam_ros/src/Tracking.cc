@@ -301,7 +301,7 @@ void Tracking::Track()
         // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
         if(!mbOnlyTracking)
         {
-            // Local Mapping is activated. This is the normal behaviour, unless
+            // Local Mapping is ACTIVATED! This is the normal behaviour, unless
             // you explicitly activate the "only tracking" mode.
 
             if(mState==OK)
@@ -320,9 +320,9 @@ void Tracking::Track()
                         bOK = TrackReferenceKeyFrame();
                 }
             }
-            else
+            else    // Tracking is lost
             {
-                bOK = Relocalization();
+                bOK = Relocalization(); // 参照画像中から現在の計測画像に類似するものを探索
             }
         }
         else
@@ -437,9 +437,17 @@ void Tracking::Track()
                 mVelocity = cv::Mat();
 
             mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
-	    mpSlamDataPub->SetCurrentCameraPose(mCurrentFrame.mTcw);    // Publish用のPose格納
+	        mpSlamDataPub->SetCurrentCameraPose(mCurrentFrame.mTcw);    // Publish用のPose格納
+	        mpSlamDataPub->SetCurrentCameraPoseCovariance(mCurrentFrame.covariance);
+            for(int i=0;i<6;i++){
+                for(int j=0;j<6;j++) {
+                    std::cout<<mCurrentFrame.covariance.at<float>(j,i)<<"\t";
+                }
+                std::cout<<std::endl;
+            }
 
-	    // ここにNewPoseのSubscribeを追加?
+
+            // ここにNewPoseのSubscribeを追加?
 	    
             // Clean VO matches
             for(int i=0; i<mCurrentFrame.N; i++)
@@ -945,7 +953,7 @@ bool Tracking::TrackLocalMap()
     SearchLocalPoints();
 
     // Optimize Pose
-    Optimizer::PoseOptimization(&mCurrentFrame);
+    Optimizer::PoseOptimization(&mCurrentFrame);    // バンドル調整により位置の最適化
     mnMatchesInliers = 0;
 
     // Update MapPoints Statistics

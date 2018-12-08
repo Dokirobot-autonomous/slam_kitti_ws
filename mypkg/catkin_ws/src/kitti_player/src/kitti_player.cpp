@@ -1647,17 +1647,17 @@ int main(int argc, char **argv)
         ++progress;
         node.setParam("entries_played",(int)entries_played);
 
-//            while(true){
-//                ROS_INFO_STREAM("Wainting for ndt_node first pose");
-//                int tmp=1;
-//                std::string str="/ndt_mapping_tku/callback_num";
-//                node.getParam(str,tmp);
-//                if(tmp==entries_played){
-//                    break;
-//                }
-//                std::this_thread::sleep_for(std::chrono::microseconds(1));
-////            }
-//        }
+            while(true){
+                ROS_INFO_STREAM("Wainting for ndt_node first pose");
+                int tmp=1;
+                std::string str="/ndt_mapping_tku/callback_num";
+                node.getParam(str,tmp);
+                if(tmp==entries_played || !ros::ok()){
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::microseconds(1));
+//            }
+        }
 
 
         entries_played++;
@@ -1686,6 +1686,8 @@ int main(int argc, char **argv)
 //                }
 //            }
 //        }
+
+
 
         loop_end= clock();
         exe_time = (double)(loop_end-loop_start)/CLOCKS_PER_SEC;

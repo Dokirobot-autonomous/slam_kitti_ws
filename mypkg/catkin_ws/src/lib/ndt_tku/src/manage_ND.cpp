@@ -232,9 +232,11 @@ NDMapPtr initialize_NDmap_layer(int layer, NDMapPtr child)
   x = (g_map_x >> layer) + 1;
   y = (g_map_y >> layer) + 1;
   z = (g_map_z >> layer) + 1;
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   nd = (NDPtr *)malloc(x * y * z * sizeof(NDPtr));
   ndmap = (NDMapPtr)malloc(sizeof(NDMap));
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   ndmap->x = x;
   ndmap->y = y;
@@ -245,6 +247,7 @@ NDMapPtr initialize_NDmap_layer(int layer, NDMapPtr child)
   ndmap->nd = nd;
   ndmap->next = child;
   ndmap->size = g_map_cellsize * ((int)1 << layer);
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   ndp = nd;
 
@@ -259,6 +262,7 @@ NDMapPtr initialize_NDmap_layer(int layer, NDMapPtr child)
       }
     }
   }
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   return ndmap;
 }
@@ -271,21 +275,25 @@ NDMapPtr initialize_NDmap(void)
 
   printf("Initialize NDmap\n");
   ndmap = 0;
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   // init NDs
   NDs = (NDPtr)malloc(sizeof(NormalDistribution) * MAX_ND_NUM);
   NDs_num = 0;
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   null_nd = add_ND();
   if (null_nd == 0)
   {
     return 0;
   }
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   for (i = LAYER_NUM - 1; i >= 0; i--)
   {
     ndmap = initialize_NDmap_layer(i, ndmap);
   }
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   return ndmap;
 }

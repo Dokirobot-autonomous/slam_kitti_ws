@@ -346,7 +346,7 @@ void publishPaths(ros::Publisher& path_publisher,
         //            ROS_DEBUG_STREAM("origin in cur_pose=\n"
         //                             << kf.second.getEigenPose().translation().transpose());
 
-        toGeometryMsg(cur_pose.pose, kf.second->getEigenPose().inverse());
+        toGeometryMsg(cur_pose.pose, kf.second->getEigenPose().inverse()); // second：std::pairの2番目
 
         path_msg.poses.push_back(cur_pose);
 

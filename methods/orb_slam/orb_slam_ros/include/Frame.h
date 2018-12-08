@@ -69,6 +69,9 @@ public:
     // Computes rotation, translation and camera center matrices from the camera pose.
     void UpdatePoseMatrices();
 
+    // Set the camera pose covariance.
+    void SetCovariance(cv::Mat cov);
+
     // Returns the camera center.
     inline cv::Mat GetCameraCenter(){
         return mOw.clone();
@@ -162,6 +165,9 @@ public:
 
     // Camera pose.
     cv::Mat mTcw;
+
+    // Camera Covariance
+    cv::Mat covariance;
 
     // Current and Next Frame id.
     static long unsigned int nNextId;

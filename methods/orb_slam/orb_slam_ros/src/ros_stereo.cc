@@ -40,9 +40,21 @@ using namespace std;
 std::chrono::steady_clock::time_point tt1;
 std::chrono::steady_clock::time_point tt2;
 
+namespace ORB_SLAM2
+{
+    float orb_pose_covariance_gain=0.1;
+}
+
+//float orb_pose_covariance_gain=0.1;
+
 class ImageGrabber
 {
 public:
+
+    ros::NodeHandle* nh;
+
+    void setRosparam();
+
     ImageGrabber(ORB_SLAM2::System* pSLAM):mpSLAM(pSLAM){}
 
     void GrabStereo(const sensor_msgs::ImageConstPtr& msgLeft,const sensor_msgs::ImageConstPtr& msgRight);
@@ -63,13 +75,15 @@ int main(int argc, char **argv)
         cerr << endl << "Usage: rosrun ORB_SLAM2 Stereo path_to_settings" << endl;
         ros::shutdown();
         return 1;
-    }    
-    
+    }
+
     
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
     ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::STEREO,false);
 
     ImageGrabber igb(&SLAM);
+
+    igb.nh=&nh;
 
     //stringstream ss(argv[3]);
     //ss >> boolalpha >> igb.do_rectify;
@@ -117,7 +131,7 @@ int main(int argc, char **argv)
     message_filters::Subscriber<sensor_msgs::Image> right_sub(nh, "/camera/right/image_raw", 1);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
     message_filters::Synchronizer<sync_pol> sync(sync_pol(10), left_sub,right_sub);
-    sync.registerCallback(boost::bind(&ImageGrabber::GrabStereo,&igb,_1,_2));
+    sync.registerCallback(boost::bind(&ImageGrabber::GrabStereo,&igb,_1,_2)); // SfMの実行
 
     ros::spin();
 
@@ -134,8 +148,15 @@ int main(int argc, char **argv)
     return 0;
 }
 
+void ImageGrabber::setRosparam()
+{
+    nh->getParam("orb_pose_covariance_gain",ORB_SLAM2::orb_pose_covariance_gain);
+}
+
 void ImageGrabber::GrabStereo(const sensor_msgs::ImageConstPtr& msgLeft,const sensor_msgs::ImageConstPtr& msgRight)
 {
+    setRosparam();
+
     tt2 = std::chrono::steady_clock::now();
     double t_round= std::chrono::duration_cast<std::chrono::duration<double> >(tt2 - tt1).count();
     cout << "Round time cost = " <<  t_round  << "s,  freqency = " << 1/t_round << "Hz\n" << endl;
@@ -166,7 +187,8 @@ void ImageGrabber::GrabStereo(const sensor_msgs::ImageConstPtr& msgLeft,const se
     }
     std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
     double timread= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-     
+
+    /* Trackingの実行 */
     if(do_rectify)
     {
         cv::Mat imLeft, imRight;

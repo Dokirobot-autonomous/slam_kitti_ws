@@ -16,6 +16,8 @@
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovariance.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
@@ -59,7 +61,8 @@ public:
     void Release();
 
     void SetCurrentCameraPose(const cv::Mat &Tcw);
-    
+    void SetCurrentCameraPoseCovariance(const cv::Mat &Cov);
+
 private:
 
     bool Stop();
@@ -86,10 +89,13 @@ private:
     
     std::mutex mMutexCamera;
     cv::Mat mCameraPose;
-    
+    cv::Mat mCameraPoseCovariance;
+
     //ros::Publisher path_pub_;
     ros::Publisher CamPose_pub_;
+    ros::Publisher CamPoseWithCov_pub_;
     ros::Publisher VehiclePose_pub_;
+    ros::Publisher VehiclePoseWithCov_pub_;
     ros::Publisher CamPath_pub_;
     ros::Publisher VehiclePath_pub_;
     ros::Publisher AllPointCloud_pub_;
@@ -103,9 +109,11 @@ private:
     ros::NodeHandle nh;
     
     bool mbGetNewCamPose;
-    
+    bool mbGetNewCamPoseWithCov;
+
     void TrackingDataPub();   
     void GetCurrentROSCameraMatrix(geometry_msgs::PoseStamped &cam_pose);
+    void GetCurrentROSCameraWithCovarianceMatrix(geometry_msgs::PoseWithCovarianceStamped &cam_pose_with_cov);
     void GetCurrentROSVehicleMatrix(geometry_msgs::PoseStamped &vehicle_pose);
     void GetCurrentROSTrajectories(nav_msgs::Path &cam_path, nav_msgs::Path &vehicle_path);    
     

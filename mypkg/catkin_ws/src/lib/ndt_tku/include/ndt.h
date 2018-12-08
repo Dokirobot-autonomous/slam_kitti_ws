@@ -296,6 +296,7 @@ int adjust2d(PointPtr scan, int num, PosturePtr initial);
 
 double calc_summand3d(PointPtr p, NDPtr nd, PosturePtr pose, double *g, double H[6][6], double qd3[6][3], double dist);
 double adjust3d(PointPtr scan, int num, PosturePtr initial, int target);
+double adjust3d(PointPtr scan, int num, PosturePtr initial, int target, double *hessian_inv);
 void set_sincos2(double a, double b, double g, double sc[3][3]);
 void scan_transrate(PointPtr src, PointPtr dst, PosturePtr pose, int num);
 

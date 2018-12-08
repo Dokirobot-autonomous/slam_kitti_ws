@@ -8,7 +8,7 @@
 #define G_MAP_X 2000
 #define G_MAP_Y 2000
 #define G_MAP_Z 200
-#define G_MAP_CELLSIZE 1.0
+#define G_MAP_CELLSIZE 2
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -83,8 +83,9 @@ static ros::Publisher ndmap_pub;
 static std::chrono::time_point<std::chrono::system_clock> matching_start, matching_end;
 static double exe_time = 0.0;
 
-static ros::Publisher localizer_pose_pub, ndt_pose_pub,localizer_path_pub;
+static ros::Publisher localizer_pose_pub,localizer_pose_with_covariance_pub, ndt_pose_pub,localizer_path_pub;
 static geometry_msgs::PoseStamped localizer_pose_msg, ndt_pose_msg;
+static geometry_msgs::PoseWithCovarianceStamped localizer_pose_with_covariance_msg;
 static nav_msgs::Path localizer_path_msg;
 
 ros::NodeHandle* nh_global;
@@ -120,16 +121,22 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
 {
   /* get Parameters */
   float resolution,transformation_epsilon,leaf_size;
+  double ndt_pose_covariance_gain;
   if(!private_nh_global->getParam("resolution",resolution)){
       g_map_cellsize=resolution=G_MAP_CELLSIZE;
   }
   if(!private_nh_global->getParam("leaf_size",leaf_size)){
-      leaf_size=0.5;
+      leaf_size=0.6;
   }
+  if(!private_nh_global->getParam("ndt_pose_covariance_gain",ndt_pose_covariance_gain)){
+    ndt_pose_covariance_gain=0.1;
+  }
+
+  double hessian_inv[36];
 
   //(*private_nh_global).getParam("transformation_epsilon",transformation_epsilon);
 
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
     matching_start = std::chrono::system_clock::now();
   static int count = 0;
@@ -148,7 +155,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   double e = 0;
   double x_offset, y_offset, z_offset, theta_offset;
   double distance;
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   tf::Quaternion ndt_q, localizer_q;
 
@@ -163,7 +170,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr scan_ptr(new pcl::PointCloud<pcl::PointXYZ>(scan));
   pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_scan_ptr(new pcl::PointCloud<pcl::PointXYZ>);
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_filter;
   voxel_grid_filter.setLeafSize(leaf_size, leaf_size, leaf_size);
@@ -182,7 +189,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
     int ohs_y=std::abs(scan_points[j].y);
     int ohs_z=std::abs(scan_points[j].z);
     if(ohs_x>1000 || ohs_y>1000 ||ohs_z>1000){
-        ROS_WARN("Error velodyne_clouds");
+        ROS_INFO("Error velodyne_clouds");
         return;
     }
 
@@ -199,7 +206,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
       break;
   }
   scan_points_num = j;
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   /*--matching---*/
   // calc offset
@@ -222,7 +229,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   pose.theta3 = prev_pose.theta3 + theta_offset;
 
   initial_pose = pose;
-//  std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+//  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   // matching
   for (layer_select = 1; layer_select >= 1; layer_select -= 1)
@@ -233,27 +240,28 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
       {
         break;
       }
-//        std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+         std::cout<<__FILE__<<","<<__LINE__<<std::endl;
       bpose = pose;
 
-//        std::cout<<__FILE__<<","<<__LINE__<<std::endl;
-      e = adjust3d(scan_points, scan_points_num, &pose, layer_select);
+//        // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+//      e = adjust3d(scan_points, scan_points_num, &pose, layer_select);
+      e = adjust3d(scan_points, scan_points_num, &pose, layer_select,hessian_inv);
 
-//        std::cout<<__FILE__<<","<<__LINE__<<std::endl;
-      pose_mod(&pose);
+//        // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+      pose_mod(&pose);  // すべての角度をpi以下に
 
-//        std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+//        // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
       if ((bpose.x - pose.x) * (bpose.x - pose.x) + (bpose.y - pose.y) * (bpose.y - pose.y) +
               (bpose.z - pose.z) * (bpose.z - pose.z) + 3 * (bpose.theta - pose.theta) * (bpose.theta - pose.theta) +
               3 * (bpose.theta2 - pose.theta2) * (bpose.theta2 - pose.theta2) +
               3 * (bpose.theta3 - pose.theta3) * (bpose.theta3 - pose.theta3) <
-          0.00001)
+          0.00001)  // 多分勾配を見てる?
       {
         break;
       }
     }
     iteration = j;
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
     /*gps resetting*/
     if (g_use_gnss)
@@ -291,12 +299,12 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
         pose.theta3 = yaw + nrand(0.7);
         prev_pose2 = prev_pose = pose;
         printf("reset %f %f %f %f %f %f\n", pose.x, pose.y, pose.z, pose.theta, pose.theta2, pose.theta3);
-          //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+          //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
         return;
       }
     }
-      //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+      //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
     // unti-distotion
     if (layer_select == 2)
@@ -318,7 +326,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
       {
         dtheta -= 2 * M_PI;
       }
-        //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+        //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
       rate = dtheta / (double)scan_points_num;
       xrate = dx / (double)scan_points_num;
@@ -343,7 +351,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
       }
     }
   }
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   // localizer
   Eigen::Translation3f translation(pose.x, pose.y, pose.z);
@@ -352,7 +360,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   Eigen::AngleAxisf rotation_z(pose.theta3, Eigen::Vector3f::UnitZ());
   Eigen::Matrix4f local_t = (translation * rotation_z * rotation_y * rotation_x).matrix();
   Eigen::Matrix4f global_t = tf_local_to_global * local_t;
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   tf::Matrix3x3 mat_l;
   mat_l.setValue(
@@ -374,7 +382,15 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   localizer_path_msg.header=localizer_pose_msg.header;
   localizer_path_msg.poses.push_back(localizer_pose_msg);
 
-  // base_link
+  // Pose with covariance
+  localizer_pose_with_covariance_msg.header=localizer_pose_msg.header;
+  localizer_pose_with_covariance_msg.pose.pose=localizer_pose_msg.pose;
+  for(int i=0;i<36;i++){
+    localizer_pose_with_covariance_msg.pose.covariance[i]=hessian_inv[i]*ndt_pose_covariance_gain;
+  }
+
+
+    // base_link
   Eigen::Matrix4f global_t2 = global_t * tf_ltob;
   tf::Matrix3x3 mat_b;  // base_link
   mat_b.setValue(
@@ -382,7 +398,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
       static_cast<double>(global_t2(1, 0)), static_cast<double>(global_t2(1, 1)), static_cast<double>(global_t2(1, 2)),
       static_cast<double>(global_t2(2, 0)), static_cast<double>(global_t2(2, 1)), static_cast<double>(global_t2(2, 2)));
   mat_b.getRotation(ndt_q);
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   ndt_pose_msg.header.frame_id = "/ndt_map";
   ndt_pose_msg.header.stamp = current_scan_time;
@@ -397,6 +413,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   // localize_poseはlidarの位置
   // 本研究では、こちらを利用
   localizer_pose_pub.publish(localizer_pose_msg);
+  localizer_pose_with_covariance_pub.publish(localizer_pose_with_covariance_msg);
 //  ndt_pose_pub.publish(ndt_pose_msg);
   localizer_path_pub.publish(localizer_path_msg);
 
@@ -406,7 +423,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   {
     map_points_i[i] = scan_points_i[i];
   }
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   // update ND map
   distance = (key_pose.x - pose.x) * (key_pose.x - pose.x) + (key_pose.y - pose.y) * (key_pose.y - pose.y) +
@@ -423,7 +440,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
     is_map_exist = 1;
   }
 
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
   prev_pose2 = prev_pose;
   prev_pose = pose;
 
@@ -447,7 +464,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
 
   matching_end = std::chrono::system_clock::now();
   exe_time = std::chrono::duration_cast<std::chrono::microseconds>(matching_end - matching_start).count() / 1000.0;
-    //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+    //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   std::cout << "-----------------------------------------------------------------" << std::endl;
   std::cout<<"resolution leaf_size: "<<resolution<<" "<<leaf_size<<std::endl;
@@ -634,7 +651,7 @@ int main(int argc, char *argv[])
   q_local_to_global.setRPY(0.0, 0.0, g_map_rotation);
   tf_local_to_global =
       (tl_local_to_global * rot_z_local_to_global * rot_y_local_to_global * rot_x_local_to_global).matrix();
-  //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
 
   /* get Parameters */
@@ -652,7 +669,7 @@ int main(int argc, char *argv[])
 
   /*initialize(clear) NDmap data*/
   NDmap = initialize_NDmap();
-//std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   // load map
   prev_pose.x = (g_ini_x - g_map_center_x) * cos(-g_map_rotation) - (g_ini_y - g_map_center_y) * sin(-g_map_rotation);
@@ -661,19 +678,20 @@ int main(int argc, char *argv[])
   prev_pose.theta = g_ini_roll;
   prev_pose.theta2 = g_ini_pitch;
   prev_pose.theta3 = g_ini_yaw - g_map_rotation;
-//std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   prev_pose2 = prev_pose;
   is_first_time = 1;
-//std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   ndmap_pub = nh.advertise<sensor_msgs::PointCloud2>("/ndt_map", 1000);
 //  ndt_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/ndt_pose", 1000);
   localizer_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 1000);
+  localizer_pose_with_covariance_pub=nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("current_pose_with_covariance",1000);
   localizer_path_pub = nh.advertise<nav_msgs::Path>("/current_path", 1000);
 
   ros::Subscriber points_sub = nh.subscribe("points_raw", 1000, points_callback);
-  //std::cout<<__FILE__<<","<<__LINE__<<std::endl;
+  // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   ros::spin();
 

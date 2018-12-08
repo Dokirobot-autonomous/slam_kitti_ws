@@ -30,6 +30,11 @@
 
 using namespace std;
 
+namespace ORB_SLAM2
+{
+    float orb_pose_covariance_gain=0.1;
+}
+
 
 class ImageGrabber
 {

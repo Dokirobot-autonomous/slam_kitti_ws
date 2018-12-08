@@ -1,0 +1,29 @@
+limoにおけるプログラムのシステムflow
+
+
+--- 推定位置の算出 ---
+/limo/keyframe_bundle_adjustment_ros_tool/src/mono_lidar/mono_lidar.cpp
+    MonoLidar::callbackSubscriber
+        std::string summary = bundle_adjuster_->solve();
+
+/limo/keyframe_bundle_adjustment/src/bundle_adjuster_keyframes.cpp
+    solve()
+        auto final_summary = robust_optimization::solveTrimmed(number_iterations, input, *problem_, opt);
+
+limo/robust_optimization/src/robust_solving.cpp
+    solveTrimmed
+        ceres::Solve(options, &problem, &summary);  // summaryに推定結果を格納　
+
+
+// keyframe_bundle_adjustment::BundleAdjusterKeyframes.keyframes_[i].second->getEigenPose() で位置を取得
+
+bundle_adjuster_keyframes.hpp
+    std::map<KeyframeId, Keyframe::Ptr> keyframes_; // 位置情報を保管，Keyframe->getEigenPose()で取得
+
+
+// pathのpublish
+mono_lidar.cpp
+    helpers::publishPaths();
+publish_helpers.hpp
+    publishPaths();
+        toGeometryMsg(cur_pose.pose, kf.second->getEigenPose().inverse());  //

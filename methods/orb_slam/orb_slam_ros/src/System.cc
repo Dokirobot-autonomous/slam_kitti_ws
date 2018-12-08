@@ -18,6 +18,7 @@
 * along with ORB-SLAM2. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* GetTrackingState(), GetTrackedMapPoints(), GetTrackedKeyPointsUn()で情報取得可能 */
 
 
 #include "System.h"

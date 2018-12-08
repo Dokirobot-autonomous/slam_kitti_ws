@@ -1,0 +1,32 @@
+Stereo画像におけるプログラムのシステムflow
+
+ros_stereo.cc
+    cv::Mat cameraPose = mpSLAM->TrackStereo(cv_ptrLeft->image,cv_ptrRight->image,cv_ptrLeft->header.stamp.toSec());
+
+System.cc
+    TrackStereo
+        cv::Mat Tcw = mpTracker->GrabImageStereo(imLeft,imRight,timestamp); // Camera Poseを算出（デフォルトでは使用されていない）
+
+Tracking.cc
+    GrabImageStereo
+        Track()
+    Track
+        bOK = TrackReferenceKeyFrame(); // 計測点群の最近ぼう参照点を探索
+        if Tracking is lost
+            bOK = Relocalization(); // 参照画像中から現在の計測画像に類似するものを探索
+        else
+            bOK = TrackLocalMap();  // 位置推定
+
+    TrackLocalMap()
+        Optimizer::PoseOptimization(&mCurrentFrame);    // バンドル調整により位置の最適化
+
+Optimizer.cc
+    PoseOptimization
+
+
+
+
+
+mTrackingState = mpTracker->mState;                         // 最新の位置情報を更新
+mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;  // 最新の特徴量を更新
+mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;    // 最新の特徴点を更新
