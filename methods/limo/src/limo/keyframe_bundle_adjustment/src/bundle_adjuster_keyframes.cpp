@@ -14,6 +14,7 @@
 #include <random>
 #include <sstream>
 #include <ceres/ceres.h>
+#include <ceres/covariance.h>
 #include "internal/cost_functors_ceres.hpp"
 #include "internal/definitions.hpp"
 #include "internal/local_parameterizations.hpp"
@@ -623,7 +624,7 @@ std::string BundleAdjusterKeyframes::solve() {
 
     // Reinitialize ceres::Problem to get rid of old landmarks.
     ceres::Problem::Options options{};
-    options.enable_fast_removal = true; // Important for removing ost functors efficiently.
+    options.enable_fast_removal = true; // Important covafor removing ost functors efficiently.
     problem_ = std::make_shared<ceres::Problem>(options);
 
     auto start_time_lm_sel = std::chrono::steady_clock::now();
@@ -705,7 +706,7 @@ std::string BundleAdjusterKeyframes::solve() {
         std::cout << "Add scale reg." << std::endl;
     }
     if (residual_block_ids_gp.size() > 0) {
-        addGroundplaneRegularization(10.);
+        addGroundplaneRegularization(10.);  // コスト関数の定義と関数代入
     }
 
     // Fix plane distance if it is the only scale info we got.
@@ -753,6 +754,39 @@ std::string BundleAdjusterKeyframes::solve() {
     opt.trust_region_relaxation_factor = -10.; // Reset trust region at each iteration.
     opt.num_threads = 3;
     auto final_summary = robust_optimization::solveTrimmed(number_iterations, input, *problem_, opt);
+
+    // Compute covariance
+    ceres::Covariance::Options covariance_options;
+    covariance_options.algorithm_type=ceres::DENSE_SVD;
+    ceres::Covariance covariance(covariance_options);
+
+    std::vector<std::pair<const double*, const double*> > covariance_blocks;
+
+    for (auto it = active_keyframe_ids_.cbegin(); it != active_keyframe_ids_.cend(); it++) {
+        //covarianceの取得
+        const double* pose_block=keyframes_.at(*it)->pose_.data();
+        covariance_blocks.push_back(std::make_pair(pose_block,pose_block) );
+    }
+
+    std::cout << "--------------------- covariance_aaaaa ---------------------" << std::endl;
+    if(covariance.Compute(covariance_blocks,problem_.get())) {
+
+        std::cout << "--------------------- covariance ---------------------" << std::endl;
+        for (auto it = active_keyframe_ids_.cbegin(); it != active_keyframe_ids_.cend(); it++) {
+            const double* pose_block=keyframes_.at(*it)->pose_.data();
+            covariance.GetCovarianceBlock(pose_block,pose_block,keyframes_.at(*it)->pose_covariance_.data());
+//            covariance.GetCovarianceBlock(covariance_blocks,covariance_blocks,cov);
+
+            double* tmp=keyframes_.at(*it)->pose_covariance_.data();
+            for(int i=0;i<6;i++){
+                for(int j=0;j<6;j++){
+                    std::cout<< *(tmp+i*6+j)<<","<<std::endl;
+                }
+            }
+        }
+    }
+
+
     return final_summary.FullReport();
 }
 

@@ -235,7 +235,7 @@ Summary solveTrimmed(const std::vector<int>& number_iterations,
 
     // Solve problem.
     ceres::Solver::Summary summary;
-    ceres::Solve(options, &problem, &summary);　
+    ceres::Solve(options, &problem, &summary);
     summaries.push_back(summary);
     Summary trimmer_summary(summaries);
     trimmer_summary.time_sec = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(

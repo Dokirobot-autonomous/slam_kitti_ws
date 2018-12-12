@@ -21,6 +21,7 @@ using CameraIds = std::vector<CameraId>;   ///< ids for cameras
 using PoseId = KeyframeId;                 ///< poses are linked to keyframes so ids should be identical
 using EigenPose = Eigen::Isometry3d;       ///< poses are isometries not affine transformaions
 using Pose = std::array<double, 7>;        ///< poses are stored as quaternion(w,x,y,z) and translation(x,y,z)
+using PoseCovariance = std::array<double, 49>; ///< pose covariances are stored as quaternion(w,x,y,z) and translation(x,y,z)
 using ResidualId = ceres::ResidualBlockId; ///< ids given by ceres to identify residuals so we can
 using Direction = std::array<double, 3>;   ///< direction vector
 ///@brief plane, consisting of normal vector and distance to zero.

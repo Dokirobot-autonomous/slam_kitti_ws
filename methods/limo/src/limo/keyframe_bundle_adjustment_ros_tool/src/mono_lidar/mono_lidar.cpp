@@ -332,20 +332,20 @@ void MonoLidar::callbackSubscriber(const TrackletsMsg::ConstPtr& tracklets_msg,
     // ROS_DEBUG_STREAM("In MonoLidar: published " << out_msg.constraints.size() << " pose delta constraints to topic "
     //                                             << interface_.trajectory_publisher_topic);
 
-    if (interface_.path_publisher_topic != "" && interface_.active_path_publisher_topic != "") {
+//    if (interface_.path_publisher_topic != "" && interface_.active_path_publisher_topic != "") {
         helpers::publishPaths(interface_.path_publisher,
                               interface_.active_path_publisher,
                               bundle_adjuster_,
                               interface_.tf_parent_frame_id);
-    }
+//    }
 
-    if (interface_.landmarks_publisher_topic != "") {
+//    if (interface_.landmarks_publisher_topic != "") {
         helpers::publishLandmarks(interface_.landmarks_publisher, bundle_adjuster_, interface_.tf_parent_frame_id);
-    }
+//    }
 
-    if (interface_.planes_publisher_topic != "") {
+//    if (interface_.planes_publisher_topic != "") {
         helpers::publishPlanes(interface_.planes_publisher, bundle_adjuster_, interface_.tf_parent_frame_id);
-    }
+//    }
     ss << "Duration publish="
        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
                                                                 start_time_publish_stuff)

@@ -1,5 +1,15 @@
 limoにおけるプログラムのシステムflow
 
+おそらく，active_path内の位置は常にバンドル調整をかけ，アップデートする
+
+--- covariance関数 ---
+/limo/keyframe_bundle_adjustment/src/bundle_adjuster_keyframes.cpp
+    solve()
+
+--- cost関数 ---
+/limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/cost_functors_ceres.hpp
+    // cost関数の記述ファイル
+AddResidualBlock()  // ceres::Solverにコスト関数を追加
 
 --- 推定位置の算出 ---
 /limo/keyframe_bundle_adjustment_ros_tool/src/mono_lidar/mono_lidar.cpp
