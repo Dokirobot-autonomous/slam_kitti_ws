@@ -15,6 +15,7 @@
 #include <sstream>
 #include <ceres/ceres.h>
 #include <ceres/covariance.h>
+//#include <ceres/covariance_impl.h>
 #include "internal/cost_functors_ceres.hpp"
 #include "internal/definitions.hpp"
 #include "internal/local_parameterizations.hpp"
@@ -757,8 +758,9 @@ std::string BundleAdjusterKeyframes::solve() {
 
     // Compute covariance
     ceres::Covariance::Options covariance_options;
-    covariance_options.algorithm_type=ceres::DENSE_SVD;
+//    covariance_options.algorithm_type=ceres::DENSE_SVD;
     ceres::Covariance covariance(covariance_options);
+//    ceres::internal::CovarianceImpl covariance(covariance_options);
 
     std::vector<std::pair<const double*, const double*> > covariance_blocks;
 
@@ -768,20 +770,21 @@ std::string BundleAdjusterKeyframes::solve() {
         covariance_blocks.push_back(std::make_pair(pose_block,pose_block) );
     }
 
-    std::cout << "--------------------- covariance_aaaaa ---------------------" << std::endl;
     if(covariance.Compute(covariance_blocks,problem_.get())) {
 
         std::cout << "--------------------- covariance ---------------------" << std::endl;
         for (auto it = active_keyframe_ids_.cbegin(); it != active_keyframe_ids_.cend(); it++) {
             const double* pose_block=keyframes_.at(*it)->pose_.data();
             covariance.GetCovarianceBlock(pose_block,pose_block,keyframes_.at(*it)->pose_covariance_.data());
-//            covariance.GetCovarianceBlock(covariance_blocks,covariance_blocks,cov);
+//            covariance.GetCovarianceBlockGetCovarianceBlockInTangentSpace(pose_block,pose_block,keyframes_.at(*it)->pose_covariance_.data());
 
             double* tmp=keyframes_.at(*it)->pose_covariance_.data();
-            for(int i=0;i<6;i++){
-                for(int j=0;j<6;j++){
-                    std::cout<< *(tmp+i*6+j)<<","<<std::endl;
+            std::cout<<sizeof(tmp)<<std::endl;
+            for(int i=0;i<7;i++){
+                for(int j=0;j<7;j++){
+                    std::cout<< *(tmp+i*6+j+1)<<"\t";
                 }
+                std::cout<<std::endl;
             }
         }
     }

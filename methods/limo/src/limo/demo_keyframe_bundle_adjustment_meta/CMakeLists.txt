@@ -65,7 +65,8 @@ catkin_package(
 include_directories(
     ${mrt_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
-    )
+    /home/ohashi/archives/ceres-solver/internal/ceres
+)
 
 link_directories(
     ${mrt_LIBRARY_DIRS}
