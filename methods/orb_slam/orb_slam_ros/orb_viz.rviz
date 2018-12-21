@@ -89,55 +89,23 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        firefly/base_link:
+        local_cs:
           Value: true
-        firefly/base_link_inertia:
+        orb_map:
           Value: true
-        firefly/imu_link:
+        sensor/camera:
           Value: true
-        firefly/imugt_link:
+        sensor/camera/color/left:
           Value: true
-        firefly/odometry_sensor1:
+        sensor/camera/color/right:
           Value: true
-        firefly/odometry_sensor1_link:
+        sensor/camera/grayscale/left:
           Value: true
-        firefly/odometry_sensorgt_link:
+        sensor/camera/grayscale/right:
           Value: true
-        firefly/rotor_0:
-          Value: true
-        firefly/rotor_1:
-          Value: true
-        firefly/rotor_2:
-          Value: true
-        firefly/rotor_3:
-          Value: true
-        firefly/rotor_4:
-          Value: true
-        firefly/rotor_5:
-          Value: true
-        firefly/vi_sensor/base_link:
-          Value: true
-        firefly/vi_sensor/camera_depth_link:
-          Value: true
-        firefly/vi_sensor/camera_depth_optical_center_link:
-          Value: true
-        firefly/vi_sensor/camera_left_link:
-          Value: true
-        firefly/vi_sensor/camera_left_optical_link:
-          Value: true
-        firefly/vi_sensor/camera_right_link:
-          Value: true
-        firefly/vi_sensor/ground_truth/odometry_sensor_link:
-          Value: true
-        firefly/vi_sensor/imu_link:
-          Value: true
-        firefly/vi_sensor/vi_sensor_link:
-          Value: true
-        ground:
+        sensor/velodyne:
           Value: true
         vehicle:
-          Value: true
-        world:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -145,9 +113,21 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        ground:
-          vehicle:
-            {}
+        local_cs:
+          orb_map:
+            vehicle:
+              {}
+          sensor/camera:
+            sensor/camera/color/left:
+              {}
+            sensor/camera/color/right:
+              {}
+            sensor/camera/grayscale/left:
+              {}
+            sensor/camera/grayscale/right:
+              {}
+            sensor/velodyne:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 0.100000001
@@ -211,7 +191,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: ground
+    Fixed Frame: local_cs
     Frame Rate: 30
   Name: root
   Tools:
@@ -232,7 +212,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.65875435
+      Distance: 9.2486105
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -270,5 +250,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1307
-  X: 59
-  Y: 24
+  X: 896
+  Y: 477

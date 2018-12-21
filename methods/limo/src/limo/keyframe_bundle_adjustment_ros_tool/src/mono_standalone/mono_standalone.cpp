@@ -221,6 +221,13 @@ void MonoStandalone::callbackSubscriber(const TrackletsMsg::ConstPtr& tracklets_
                                       interface_.tf_parent_frame_id);
             }
 
+            if (interface_.path_publisher_topic != "" && interface_.active_path_publisher_topic != "") {
+                    helpers::publishPathWithCovariance(interface_.path_with_cov_publisher,
+                                          interface_.active_path_with_cov_publisher,
+                                          bundle_adjuster_,
+                                          interface_.tf_parent_frame_id);
+            }
+
             if (interface_.landmarks_publisher_topic != "") {
                 helpers::publishLandmarks(
                     interface_.landmarks_publisher, bundle_adjuster_, interface_.tf_parent_frame_id);

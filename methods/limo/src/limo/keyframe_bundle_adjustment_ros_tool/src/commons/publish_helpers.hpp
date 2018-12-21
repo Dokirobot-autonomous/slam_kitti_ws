@@ -19,6 +19,9 @@
 
 #include <tf2_eigen/tf2_eigen.h>
 
+#include <tf/LinearMath/Matrix3x3.h>
+#include <tf/LinearMath/Quaternion.h>
+
 #include <nav_msgs/Path.h>
 
 #include <ros/ros.h>
@@ -363,6 +366,58 @@ void publishPaths(ros::Publisher& path_publisher,
     active_path_publisher.publish(active_path_msg);
 }
 
+void quatCov2rpyCov(double *pose_quat,double *quat_cov,double *rpy_cov){
+
+  for(int i=0;i<7;i++){
+    for(int j=0;j<7;j++){
+      std::cout<<*(quat_cov+j*7+i)<<"\t";
+    }
+    std::cout<<std::endl;
+  }
+
+  double dd=10e-6; // 推定結果が0.1~1.0の間なので，影響を及ぼさない範囲で変更
+  tf::Quaternion quat_origin(*(pose_quat+3),*(pose_quat+4),*(pose_quat+5),*(pose_quat+6));
+  tf::Quaternion quat_qxdd(*(pose_quat+3)+dd,*(pose_quat+4),*(pose_quat+5),*(pose_quat+6));
+  tf::Quaternion quat_qydd(*(pose_quat+3),*(pose_quat+4)+dd,*(pose_quat+5),*(pose_quat+6));
+  tf::Quaternion quat_qzdd(*(pose_quat+3),*(pose_quat+4),*(pose_quat+5)+dd,*(pose_quat+6));
+  tf::Quaternion quat_qwdd(*(pose_quat+3),*(pose_quat+4),*(pose_quat+5),*(pose_quat+6)+dd);
+
+  double rpy_origin[3],rpy_qxdd[3],rpy_qydd[3],rpy_qzdd[3],rpy_qwdd[3];
+  tf::Matrix3x3(quat_origin).getRPY(rpy_origin[0], rpy_origin[1], rpy_origin[2]);//quaternion -> roll,pitch,yaw
+  tf::Matrix3x3(quat_qxdd).getRPY(rpy_qxdd[0], rpy_qxdd[1], rpy_qxdd[2]);//quaternion -> roll,pitch,yaw
+  tf::Matrix3x3(quat_qydd).getRPY(rpy_qydd[0], rpy_qydd[1], rpy_qydd[2]);//quaternion -> roll,pitch,yaw
+  tf::Matrix3x3(quat_qzdd).getRPY(rpy_qzdd[0], rpy_qzdd[1], rpy_qzdd[2]);//quaternion -> roll,pitch,yaw
+  tf::Matrix3x3(quat_qwdd).getRPY(rpy_qwdd[0], rpy_qwdd[1], rpy_qwdd[2]);//quaternion -> roll,pitch,yaw
+
+  Eigen::MatrixXd jacobian(6,7);
+  jacobian << 1,0,0,0,0,0,0,
+              0,1,0,0,0,0,0,
+              0,0,1,0,0,0,0,
+              0,0,0,(rpy_qxdd[0]-rpy_origin[0])/dd,(rpy_qydd[0]-rpy_origin[0])/dd,(rpy_qzdd[0]-rpy_origin[0])/dd,(rpy_qwdd[0]-rpy_origin[0])/dd,
+              0,0,0,(rpy_qxdd[1]-rpy_origin[1])/dd,(rpy_qydd[1]-rpy_origin[1])/dd,(rpy_qzdd[1]-rpy_origin[1])/dd,(rpy_qwdd[1]-rpy_origin[1])/dd,
+              0,0,0,(rpy_qxdd[2]-rpy_origin[2])/dd,(rpy_qydd[2]-rpy_origin[2])/dd,(rpy_qzdd[2]-rpy_origin[2])/dd,(rpy_qwdd[2]-rpy_origin[2])/dd;
+
+
+  Eigen::MatrixXd eigen_quat_cov(7,7);
+  for(int i=0;i<7;i++){
+    for(int j=0;j<7;j++){
+      eigen_quat_cov(j,i)=*(quat_cov+j*7+i);
+    }
+  }
+
+
+  Eigen::MatrixXd eigen_rpy_cov(6,6);
+  eigen_rpy_cov=jacobian*eigen_quat_cov*jacobian.transpose();
+
+  for(int i=0;i<6;i++){
+    for(int j=0;j<6;j++){
+      *(rpy_cov+j*6+i)=eigen_rpy_cov(j,i);
+    }
+  }
+
+}
+
+
 /**
  * @brief publishPath, publish
  * two nav_msgs::path that can be
@@ -373,41 +428,50 @@ void publishPaths(ros::Publisher& path_publisher,
  * @param active_path_publisher
  * @param bundle_adjuster
  */
-void publishPaths(ros::Publisher& path_publisher,
-                  ros::Publisher& active_path_publisher,
+void publishPathWithCovariance(ros::Publisher& path_with_cov_publisher,
+                  ros::Publisher& active_path_with_cov_publisher,
                   keyframe_bundle_adjustment::BundleAdjusterKeyframes::Ptr bundle_adjuster,
                   std::string tf_parent_frame_id) {
-    nav_msgs::Path path_msg;
 
-    // timestamp of msg is same as last keyframe
-    ros::Time cur_ts;
-    cur_ts.fromNSec(bundle_adjuster->getKeyframe().timestamp_);
-    path_msg.header.stamp = cur_ts;
-    // frame id of msg is same as tf_parent without tf2 convention
-    path_msg.header.frame_id = "/" + tf_parent_frame_id;
+   keyframe_bundle_adjustment_ros_tool::PathWithCovariance path_with_cov_msg;
 
-    nav_msgs::Path active_path_msg = path_msg;
+   // timestamp of msg is same as last keyframe
+   ros::Time cur_ts;
+   cur_ts.fromNSec(bundle_adjuster->getKeyframe().timestamp_);
+   path_with_cov_msg.header.stamp = cur_ts;
+   // frame id of msg is same as tf_parent without tf2 convention
+   path_with_cov_msg.header.frame_id = "/" + tf_parent_frame_id;
 
-    for (const auto& kf : bundle_adjuster->keyframes_) {
-        geometry_msgs::PoseWithCovarianceStamped cur_pose;
-        ros::Time p_ts;
-        p_ts.fromNSec(kf.second->timestamp_);
-        cur_pose.header.stamp = p_ts;
-        cur_pose.header.frame_id = path_msg.header.frame_id;
-        //            ROS_DEBUG_STREAM("origin in cur_pose=\n"
-        //                             << kf.second.getEigenPose().translation().transpose());
+   keyframe_bundle_adjustment_ros_tool::PathWithCovariance active_path_with_cov_msg = path_with_cov_msg;
 
-        toGeometryMsg(cur_pose.pose.pose, kf.second->getEigenPose().inverse()); // second：std::pairの2番目
+   for (const auto& kf : bundle_adjuster->keyframes_) {
+       geometry_msgs::PoseWithCovarianceStamped cur_pose_with_cov;
+       ros::Time p_ts;
+       p_ts.fromNSec(kf.second->timestamp_);
+       cur_pose_with_cov.header.stamp = p_ts;
+       cur_pose_with_cov.header.frame_id = path_with_cov_msg.header.frame_id;
+       //            ROS_DEBUG_STREAM("origin in cur_pose=\n"
+       //                             << kf.second.getEigenPose().translation().transpose());
 
-        path_msg.poses.push_back(cur_pose);
+       toGeometryMsg(cur_pose_with_cov.pose.pose, kf.second->getEigenPose().inverse()); // second：std::pairの2番目
 
-        if (kf.second->is_active_) {
-            active_path_msg.poses.pose.push_back(cur_pose);
-        }
-    }
+       // covariance
+       double covariance[36];
+       quatCov2rpyCov(kf.second->pose_.data(),kf.second->pose_covariance_.data(),covariance);
+       for(int i=0;i<36;i++){
+         cur_pose_with_cov.pose.covariance[i]=*(covariance+i);
+       }
 
-    path_publisher.publish(path_msg);
-    active_path_publisher.publish(active_path_msg);
+       path_with_cov_msg.poses_with_covariance.push_back(cur_pose_with_cov);
+
+       if (kf.second->is_active_) {
+           active_path_with_cov_msg.poses_with_covariance.push_back(cur_pose_with_cov);
+       }
+   }
+
+   path_with_cov_publisher.publish(path_with_cov_msg);
+   active_path_with_cov_publisher.publish(active_path_with_cov_msg);
+
 }
 
 

@@ -340,8 +340,8 @@ void MonoLidar::callbackSubscriber(const TrackletsMsg::ConstPtr& tracklets_msg,
 //    }
 
 //    if (interface_.path_publisher_topic != "" && interface_.active_path_publisher_topic != "") {
-        helpers::publishPathWithCovariance(interface_.path_publisher,
-                              interface_.active_path_publisher,
+        helpers::publishPathWithCovariance(interface_.path_with_cov_publisher,
+                              interface_.active_path_with_cov_publisher,
                               bundle_adjuster_,
                               interface_.tf_parent_frame_id);
 //    }

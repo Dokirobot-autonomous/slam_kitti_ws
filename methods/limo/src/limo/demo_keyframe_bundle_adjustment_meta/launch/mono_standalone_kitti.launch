@@ -10,6 +10,8 @@
     <param name="trajectory_publisher_topic" value="/estimate/trajectory"/>
     <param name="path_publisher_topic" value="/estimate/complete_path"/>
     <param name="active_path_publisher_topic" value="/estimate/active_path"/>
+    <param name="path_with_cov_publisher_topic" value="/estimate/complete_path_with_covariance"/>
+    <param name="active_path_with_cov_publisher_topic" value="/estimate/active_path_with_covariance"/>
     <param name="landmarks_publisher_topic" value="/estimate/landmarks"/>
 
     <param name="calib_source_frame_id" value="estimate/sensor/camera/grayscale/left"/>
@@ -28,6 +30,6 @@
     <param name="critical_rotation_difference" value="0.03"/>
     <param name="show_debug_image" value="false"/>
   </node>
-  
+
 
 </launch>

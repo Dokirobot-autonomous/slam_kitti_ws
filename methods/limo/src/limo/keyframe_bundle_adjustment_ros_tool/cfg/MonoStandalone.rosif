@@ -54,6 +54,8 @@ pub_sub.add_subscriber("tracklets_subscriber", message_type="matches_msg_depth_r
 pub_sub.add_subscriber("camera_info_subscriber", message_type="sensor_msgs::CameraInfo", description="subscriber for camera info", default_topic="in_topic_camera_info", no_delay=True, configurable=False)
 pub_sub.add_publisher("active_path_publisher", message_type="nav_msgs::Path", description="publish path that is actively optimized in bundle adjustment for plotting", default_topic="active_path_topic", configurable=True)
 pub_sub.add_publisher("path_publisher", message_type="nav_msgs::Path", description="publish whole path for plotting", default_topic="path_topic", configurable=True)
+pub_sub.add_publisher("active_path_with_cov_publisher", message_type="keyframe_bundle_adjustment_ros_tool::PathWithCovariance", description="publish path that is actively optimized in bundle adjustment for plotting", default_topic="active_path_with_cov_topic", configurable=True)
+pub_sub.add_publisher("path_with_cov_publisher", message_type="keyframe_bundle_adjustment_ros_tool::PathWithCovariance", description="publish whole path for plotting", default_topic="path_with_cov_topic", configurable=True)
 pub_sub.add_publisher("landmarks_publisher", message_type="sensor_msgs::PointCloud2", description="publish landmarks in global frame", default_topic="landmarks_topic", configurable=True)
 pub_sub.add_publisher("planes_publisher", message_type="visualization_msgs::MarkerArray", description="publish estiamted local planes in global frame", default_topic="planes_topic", configurable=True)
 
