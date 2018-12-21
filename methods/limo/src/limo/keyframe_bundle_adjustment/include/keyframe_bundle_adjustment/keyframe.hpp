@@ -181,7 +181,7 @@ public:
     ///@brief pose from keyframe to origin
     Pose pose_;
 
-    ///@brief pose covariance from keyframe to origin
+    ///@brief pose riance from keyframe to origin
     PoseCovariance pose_covariance_;
 
     ///@brief groundplane parameters around keyframe

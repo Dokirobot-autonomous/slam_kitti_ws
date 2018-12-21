@@ -11,6 +11,8 @@
 #include <Eigen/Eigen>
 #include <keyframe_bundle_adjustment/bundle_adjuster_keyframes.hpp>
 
+#include "keyframe_bundle_adjustment_ros_tool/PathWithCovariance.h"
+
 // for publishing landmarks
 #include <pcl/point_types.h>
 #include <pcl_ros/point_cloud.h>
@@ -22,6 +24,8 @@
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
+
+
 
 namespace keyframe_bundle_adjustment_ros_tool {
 
@@ -358,5 +362,54 @@ void publishPaths(ros::Publisher& path_publisher,
     path_publisher.publish(path_msg);
     active_path_publisher.publish(active_path_msg);
 }
+
+/**
+ * @brief publishPath, publish
+ * two nav_msgs::path that can be
+ * shown in rviz, one for frames that are optimized at the moemnt and one for all frames;frame id is
+ * same as tf_parent, timestamp of msg is timestamp of the most
+ * current keyframe;
+ * @param path_publisher
+ * @param active_path_publisher
+ * @param bundle_adjuster
+ */
+void publishPaths(ros::Publisher& path_publisher,
+                  ros::Publisher& active_path_publisher,
+                  keyframe_bundle_adjustment::BundleAdjusterKeyframes::Ptr bundle_adjuster,
+                  std::string tf_parent_frame_id) {
+    nav_msgs::Path path_msg;
+
+    // timestamp of msg is same as last keyframe
+    ros::Time cur_ts;
+    cur_ts.fromNSec(bundle_adjuster->getKeyframe().timestamp_);
+    path_msg.header.stamp = cur_ts;
+    // frame id of msg is same as tf_parent without tf2 convention
+    path_msg.header.frame_id = "/" + tf_parent_frame_id;
+
+    nav_msgs::Path active_path_msg = path_msg;
+
+    for (const auto& kf : bundle_adjuster->keyframes_) {
+        geometry_msgs::PoseWithCovarianceStamped cur_pose;
+        ros::Time p_ts;
+        p_ts.fromNSec(kf.second->timestamp_);
+        cur_pose.header.stamp = p_ts;
+        cur_pose.header.frame_id = path_msg.header.frame_id;
+        //            ROS_DEBUG_STREAM("origin in cur_pose=\n"
+        //                             << kf.second.getEigenPose().translation().transpose());
+
+        toGeometryMsg(cur_pose.pose.pose, kf.second->getEigenPose().inverse()); // second：std::pairの2番目
+
+        path_msg.poses.push_back(cur_pose);
+
+        if (kf.second->is_active_) {
+            active_path_msg.poses.pose.push_back(cur_pose);
+        }
+    }
+
+    path_publisher.publish(path_msg);
+    active_path_publisher.publish(active_path_msg);
+}
+
+
 }
 }

@@ -42,7 +42,8 @@ if (ROS_GENERATE_MESSAGES)
     generate_messages(
         DEPENDENCIES
         #add dependencies here
-        #std_msgs
+        geometry_msgs
+        std_msgs
         )
 endif()
 

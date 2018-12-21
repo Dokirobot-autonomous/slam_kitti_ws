@@ -782,7 +782,7 @@ std::string BundleAdjusterKeyframes::solve() {
             std::cout<<sizeof(tmp)<<std::endl;
             for(int i=0;i<7;i++){
                 for(int j=0;j<7;j++){
-                    std::cout<< *(tmp+i*6+j+1)<<"\t";
+                    std::cout<< *(tmp+i*7+j)<<"\t";
                 }
                 std::cout<<std::endl;
             }
