@@ -1,0 +1,2 @@
+Header header
+geometry_msgs/PoseWithCovarianceStamped[] poses_with_covariance
