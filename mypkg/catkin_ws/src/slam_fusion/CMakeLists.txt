@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   tf
+  message_generation
 )
 
 find_package(cmake_modules REQUIRED)
@@ -24,6 +25,8 @@ find_package(Eigen3 REQUIRED)
 #        eigen3)
 
 include_directories(/usr/include/eigen3)
+include_directories(../pose_cov_ops/include/pose_cov_ops)
+include_directories(../../devel/include)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -58,12 +61,11 @@ include_directories(/usr/include/eigen3)
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+# Generate messages in the 'msg' folder
+ add_message_files(
+   FILES
+   PathWithCovariance.msg 
+ )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -79,11 +81,12 @@ include_directories(/usr/include/eigen3)
 #   Action2.action
 # )
 
-## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs#   nav_msgs#   std_msgs
-# )
+# Generate added messages and services with any dependencies listed here
+ generate_messages(
+   DEPENDENCIES
+   geometry_msgs
+   std_msgs
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
