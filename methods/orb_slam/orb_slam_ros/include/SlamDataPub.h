@@ -61,6 +61,7 @@ public:
     void Release();
 
     void SetCurrentCameraPose(const cv::Mat &Tcw);
+    void SetCurrentCameraPose(const cv::Mat &Tcw,double timestamp);
     void SetCurrentCameraPoseCovariance(const cv::Mat &Cov);
 
 private:
@@ -76,6 +77,7 @@ private:
     // 1/fps in ms
     double mT;
     float mImageWidth, mImageHeight;
+    double mTimeStamp;
 
     bool CheckFinish();
     void SetFinish();
@@ -115,7 +117,8 @@ private:
     void GetCurrentROSCameraMatrix(geometry_msgs::PoseStamped &cam_pose);
     void GetCurrentROSCameraWithCovarianceMatrix(geometry_msgs::PoseWithCovarianceStamped &cam_pose_with_cov);
     void GetCurrentROSVehicleMatrix(geometry_msgs::PoseStamped &vehicle_pose);
-    void GetCurrentROSTrajectories(nav_msgs::Path &cam_path, nav_msgs::Path &vehicle_path);    
+    void GetCurrentROSVehicleWithCovarianceMatrix(geometry_msgs::PoseWithCovarianceStamped &vehicle_pose_with_cov);
+    void GetCurrentROSTrajectories(nav_msgs::Path &cam_path, nav_msgs::Path &vehicle_path);
     
     void PointCloudPub();
     void GetCurrentROSAllPointCloud( sensor_msgs::PointCloud2 &all_point_cloud, sensor_msgs::PointCloud2 &ref_point_cloud);

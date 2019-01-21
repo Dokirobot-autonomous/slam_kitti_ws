@@ -437,8 +437,10 @@ void Tracking::Track()
                 mVelocity = cv::Mat();
 
             mpMapDrawer->SetCurrentCameraPose(mCurrentFrame.mTcw);
-	        mpSlamDataPub->SetCurrentCameraPose(mCurrentFrame.mTcw);    // Publish用のPose格納
+//	        mpSlamDataPub->SetCurrentCameraPose(mCurrentFrame.mTcw);    // Publish用のPose格納
+            mpSlamDataPub->SetCurrentCameraPose(mCurrentFrame.mTcw,mCurrentFrame.mTimeStamp);    // Publish用のPose格納
 	        mpSlamDataPub->SetCurrentCameraPoseCovariance(mCurrentFrame.covariance);
+
             for(int i=0;i<6;i++){
                 for(int j=0;j<6;j++) {
                     std::cout<<mCurrentFrame.covariance.at<float>(j,i)<<"\t";

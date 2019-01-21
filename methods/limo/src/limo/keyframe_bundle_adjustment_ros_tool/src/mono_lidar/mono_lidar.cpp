@@ -198,6 +198,7 @@ void MonoLidar::callbackSubscriber(const TrackletsMsg::ConstPtr& tracklets_msg,
             ground_plane);
 
         // If the prior was without scale, adjust it.
+        // scale: 一ステップ前と現在の位置間の距離
         if (!has_external_prior) {
             auto start_time = std::chrono::steady_clock::now();
             std::string summary_motion_only = bundle_adjuster_->adjustPoseOnly(*cur_frame);

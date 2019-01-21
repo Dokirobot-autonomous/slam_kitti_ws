@@ -129,10 +129,11 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
       leaf_size=0.6;
   }
   if(!private_nh_global->getParam("ndt_pose_covariance_gain",ndt_pose_covariance_gain)){
-    ndt_pose_covariance_gain=0.1;
+    ndt_pose_covariance_gain=200;
   }
+  std::cout<<ndt_pose_covariance_gain<<std::endl;
 
-  double hessian_inv[36];
+  double covariance[36];
 
   //(*private_nh_global).getParam("transformation_epsilon",transformation_epsilon);
 
@@ -245,7 +246,8 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
 
 //        // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 //      e = adjust3d(scan_points, scan_points_num, &pose, layer_select);
-      e = adjust3d(scan_points, scan_points_num, &pose, layer_select,hessian_inv);
+//      e = adjust3d(scan_points, scan_points_num, &pose, layer_select,covariance);
+      e = adjust3d(scan_points, scan_points_num, &pose, layer_select,covariance,ndt_pose_covariance_gain);
 
 //        // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
       pose_mod(&pose);  // すべての角度をpi以下に
@@ -386,7 +388,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   localizer_pose_with_covariance_msg.header=localizer_pose_msg.header;
   localizer_pose_with_covariance_msg.pose.pose=localizer_pose_msg.pose;
   for(int i=0;i<36;i++){
-    localizer_pose_with_covariance_msg.pose.covariance[i]=hessian_inv[i]*ndt_pose_covariance_gain;
+    localizer_pose_with_covariance_msg.pose.covariance[i]=covariance[i];
   }
 
 

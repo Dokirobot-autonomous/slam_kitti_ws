@@ -508,6 +508,7 @@ std::vector<BundleAdjusterKeyframes::ResidualIdMap> BundleAdjusterKeyframes::add
 
 void BundleAdjusterKeyframes::addGroundPlaneResiduals(double weight,
                                                       BundleAdjusterKeyframes::ResidualIdMap& residual_block_ids_gp) {
+    std::cout<<2<<std::endl;
     for (const auto& lm_id : selected_landmark_ids_) {
         if (landmarks_.at(lm_id)->is_ground_plane) {
             Eigen::Map<Eigen::Vector3d> cur_lm(landmarks_.at(lm_id)->pos.data());
@@ -553,11 +554,14 @@ void BundleAdjusterKeyframes::addGroundPlaneResiduals(double weight,
     }
 }
 
+/* コスト関数使用 */
+// PnP問題
 void BundleAdjusterKeyframes::addKeyframeToProblem(Keyframe& kf,
                                                    BundleAdjusterKeyframes::ResidualIdMap& residual_block_ids_depth,
                                                    BundleAdjusterKeyframes::ResidualIdMap& residual_block_ids_repr,
                                                    std::shared_ptr<bool> compensate_rotation) {
     // Add measruement constraints.
+    std::cout<<3<<std::endl;
     for (const auto& m : kf.measurements_) {
         // Add to problem only if landmark is selected.
         if (selected_landmark_ids_.find(m.first) != selected_landmark_ids_.cend()) {
@@ -779,13 +783,13 @@ std::string BundleAdjusterKeyframes::solve() {
 //            covariance.GetCovarianceBlockGetCovarianceBlockInTangentSpace(pose_block,pose_block,keyframes_.at(*it)->pose_covariance_.data());
 
             double* tmp=keyframes_.at(*it)->pose_covariance_.data();
-            std::cout<<sizeof(tmp)<<std::endl;
-            for(int i=0;i<7;i++){
-                for(int j=0;j<7;j++){
-                    std::cout<< *(tmp+i*7+j)<<"\t";
-                }
-                std::cout<<std::endl;
-            }
+            // std::cout<<sizeof(tmp)<<std::endl;
+            // for(int i=0;i<7;i++){
+            //     for(int j=0;j<7;j++){
+            //         std::cout<< *(tmp+i*7+j)<<"\t";
+            //     }
+            //     std::cout<<std::endl;
+            // }
         }
     }
 
@@ -793,7 +797,9 @@ std::string BundleAdjusterKeyframes::solve() {
     return final_summary.FullReport();
 }
 
+/* コスト関数使用 */
 void BundleAdjusterKeyframes::addGroundplaneRegularization(double weight) {
+    std::cout<<4<<std::endl;
     std::cout << "Size keyframes=" << active_keyframe_ids_.size() << std::endl;
     if (active_keyframe_ids_.size() > 1) {
         std::vector<ResidualId> ids_normal;
@@ -844,8 +850,11 @@ void BundleAdjusterKeyframes::addGroundplaneRegularization(double weight) {
     }
 }
 
+/* コスト関数使用 */
+// PnP問題
 std::string BundleAdjusterKeyframes::adjustPoseOnly(Keyframe& kf) {
     // Reinitialiaize to get rid of old landmarks.
+    std::cout<<5<<std::endl;
     ceres::Problem::Options options{};
     options.enable_fast_removal = true;
     problem_ = std::make_shared<ceres::Problem>(options);
@@ -914,6 +923,9 @@ std::string BundleAdjusterKeyframes::adjustPoseOnly(Keyframe& kf) {
     return final_summary.FullReport();
 }
 
+/* ランドマークが多い場合のみ使用 */
+// 共分散が平面上になる原因と考えられる
+// どーしよー！！
 void BundleAdjusterKeyframes::addScaleRegularization(double weight) {
     if (active_keyframe_ids_.size() > 1) {
         auto it0 = active_keyframe_ids_.cbegin();
@@ -923,10 +935,11 @@ void BundleAdjusterKeyframes::addScaleRegularization(double weight) {
             (keyframes_.at(*it1)->getEigenPose() * keyframes_.at(*it0)->getEigenPose().inverse()).translation().norm();
 
         ceres::CostFunction* cost_functor_reg_scale = cost_functors_ceres::PoseRegularization::Create(current_scale);
+        std::cout<<1<<std::endl;
         problem_->AddResidualBlock(cost_functor_reg_scale,
                                    new ceres::ScaledLoss(new ceres::TrivialLoss(), weight, ceres::TAKE_OWNERSHIP),
                                    keyframes_.at(*it1)->pose_.data(),
-                                   keyframes_.at(*it0)->pose_.data());
+                                   keyframes_.at(*it0)->pose_.data());  // 最初のposeのみコスト関数に代入?
     }
 }
 

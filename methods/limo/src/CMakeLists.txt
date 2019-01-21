@@ -1,0 +1,300 @@
+cmake_minimum_required(VERSION 3.12)
+project(src)
+
+set(CMAKE_CXX_STANDARD 14)
+
+include_directories(feature_tracking/feature_tracking_core/include)
+include_directories(feature_tracking/feature_tracking_core/include/feature_tracking_core)
+include_directories(feature_tracking/image_preproc/include)
+include_directories(feature_tracking/image_preproc/include/image_preproc)
+include_directories(feature_tracking/image_preproc_ros_tool/src/disp2pointcloud)
+include_directories(feature_tracking/image_preproc_ros_tool/src/gamma_correction)
+include_directories(feature_tracking/image_preproc_ros_tool/src/label_dilation)
+include_directories(feature_tracking/image_preproc_ros_tool/src/resize)
+include_directories(feature_tracking/viso_feature_tracking_ros_tool/src/commons)
+include_directories(feature_tracking/viso_feature_tracking_ros_tool/src/feature_tracking_contour_roi)
+include_directories(feature_tracking/viso_feature_tracking_ros_tool/src/viso_feature_tracking_node)
+include_directories(limo/keyframe_bundle_adjustment/include)
+include_directories(limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment)
+include_directories(limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal)
+include_directories(limo/keyframe_bundle_adjustment_ros_tool/src/commons)
+include_directories(limo/keyframe_bundle_adjustment_ros_tool/src/mono_lidar)
+include_directories(limo/keyframe_bundle_adjustment_ros_tool/src/mono_standalone)
+include_directories(limo/matches_msg_types/include)
+include_directories(limo/matches_msg_types/include/matches_msg_types)
+include_directories(limo/robust_optimization/include)
+include_directories(limo/robust_optimization/include/robust_optimization)
+include_directories(limo/robust_optimization/include/robust_optimization/internal)
+include_directories(limo/util_nodes_tf2_ros_tool/src/static_transform_alias)
+include_directories(mono_lidar_depth/matches_conversion_ros_tool/src/add_outlier_flag)
+include_directories(mono_lidar_depth/matches_conversion_ros_tool/src/mark_depth_outlier)
+include_directories(mono_lidar_depth/matches_conversion_ros_tool/src/semantic_labels)
+include_directories(mono_lidar_depth/matches_msg_conversions_ros/include)
+include_directories(mono_lidar_depth/matches_msg_conversions_ros/include/matches_msg_conversions_ros)
+include_directories(mono_lidar_depth/monolidar_fusion/include)
+include_directories(mono_lidar_depth/monolidar_fusion/include/monolidar_fusion)
+include_directories(mono_lidar_depth/tracklets_depth_ros_tool/src/tracklet_depth_node)
+include_directories(rosinterface_handler/include)
+include_directories(rosinterface_handler/include/rosinterface_handler)
+include_directories(viso2/include)
+include_directories(viso2/include/viso2)
+
+add_executable(src
+        feature_tracking/feature_tracking_core/include/feature_tracking_core/stereo_tracker.h
+        feature_tracking/feature_tracking_core/include/feature_tracking_core/stereo_tracker_libviso.h
+        feature_tracking/feature_tracking_core/include/feature_tracking_core/tracker.h
+        feature_tracking/feature_tracking_core/include/feature_tracking_core/tracker_libviso.h
+        feature_tracking/feature_tracking_core/include/feature_tracking_core/tracklet.h
+        feature_tracking/feature_tracking_core/include/feature_tracking_core/utilities.h
+        feature_tracking/feature_tracking_core/include/feature_tracking_core/visualization.h
+        feature_tracking/feature_tracking_core/src/stereo_tracker.cpp
+        feature_tracking/feature_tracking_core/src/stereo_tracker_libviso.cpp
+        feature_tracking/feature_tracking_core/src/tracker.cpp
+        feature_tracking/feature_tracking_core/src/tracker_libviso.cpp
+        feature_tracking/feature_tracking_core/src/tracklet.cpp
+        feature_tracking/feature_tracking_core/src/utilities.cpp
+        feature_tracking/feature_tracking_core/src/visualization.cpp
+        feature_tracking/feature_tracking_core/test/test_feature_tracking.cpp
+        feature_tracking/image_preproc/include/image_preproc/brightness_correction.h
+        feature_tracking/image_preproc/src/brightness_correction.cpp
+        feature_tracking/image_preproc/test/test_image_preproc.cpp
+        feature_tracking/image_preproc_ros_tool/src/disp2pointcloud/disp2pointcloud.cpp
+        feature_tracking/image_preproc_ros_tool/src/disp2pointcloud/disp2pointcloud.hpp
+        feature_tracking/image_preproc_ros_tool/src/disp2pointcloud/disp2pointcloud_node.cpp
+        feature_tracking/image_preproc_ros_tool/src/disp2pointcloud/disp2pointcloud_nodelet.cpp
+        feature_tracking/image_preproc_ros_tool/src/gamma_correction/gamma_correction.cpp
+        feature_tracking/image_preproc_ros_tool/src/gamma_correction/gamma_correction.h
+        feature_tracking/image_preproc_ros_tool/src/gamma_correction/gamma_correction_node.cpp
+        feature_tracking/image_preproc_ros_tool/src/gamma_correction/gamma_correction_nodelet.cpp
+        feature_tracking/image_preproc_ros_tool/src/label_dilation/label_dilation.cpp
+        feature_tracking/image_preproc_ros_tool/src/label_dilation/label_dilation.hpp
+        feature_tracking/image_preproc_ros_tool/src/label_dilation/label_dilation_node.cpp
+        feature_tracking/image_preproc_ros_tool/src/label_dilation/label_dilation_nodelet.cpp
+        feature_tracking/image_preproc_ros_tool/src/resize/resize.cpp
+        feature_tracking/image_preproc_ros_tool/src/resize/resize.h
+        feature_tracking/image_preproc_ros_tool/src/resize/resize_node.cpp
+        feature_tracking/image_preproc_ros_tool/src/resize/resize_nodelet.cpp
+        feature_tracking/image_preproc_ros_tool/test/disp2pointcloud_node.cpp
+        feature_tracking/image_preproc_ros_tool/test/disp2pointcloud_nodelet.cpp
+        feature_tracking/image_preproc_ros_tool/test/label_dilation_node.cpp
+        feature_tracking/image_preproc_ros_tool/test/label_dilation_nodelet.cpp
+        feature_tracking/image_preproc_ros_tool/test/test_image_preproc_ros_tool.cpp
+        feature_tracking/matches_msg_ros/test/test_matches_msg_ros.cpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/commons/commons.hpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/feature_tracking_contour_roi/feature_tracking_contour_roi.cpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/feature_tracking_contour_roi/feature_tracking_contour_roi.hpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/feature_tracking_contour_roi/feature_tracking_contour_roi_node.cpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/feature_tracking_contour_roi/feature_tracking_contour_roi_nodelet.cpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/viso_feature_tracking_node/viso_feature_tracking_interface.cpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/viso_feature_tracking_node/viso_feature_tracking_interface.h
+        feature_tracking/viso_feature_tracking_ros_tool/src/viso_feature_tracking_node/viso_feature_tracking_node.cpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/viso_feature_tracking_node/viso_feature_tracking_nodelet.cpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/viso_feature_tracking_node/viso_feature_tracking_parameters.cpp
+        feature_tracking/viso_feature_tracking_ros_tool/src/viso_feature_tracking_node/viso_feature_tracking_parameters.h
+        feature_tracking/viso_feature_tracking_ros_tool/test/test_viso_feature_tracking_ros_tool.cpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/cost_functors_ceres.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/definitions.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/keyframe_rejection_scheme_flow.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/keyframe_schemes_base.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/keyframe_selection_scheme_pose.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/keyframe_sparsification_scheme_time.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_categorization_interface.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_selection_scheme_add_depth.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_selection_scheme_base.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_selection_scheme_cheirality.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_selection_scheme_dimension_plausibility.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_selection_scheme_helpers.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_selection_scheme_observability.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_selection_scheme_random.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/landmark_selection_scheme_voxel.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/local_parameterizations.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/motion_model_regularization.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/internal/triangulator.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/bundle_adjuster_keyframes.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/keyframe.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/keyframe_selection_schemes.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/keyframe_selector.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/landmark_selection_schemes.hpp
+        limo/keyframe_bundle_adjustment/include/keyframe_bundle_adjustment/landmark_selector.hpp
+        limo/keyframe_bundle_adjustment/src/bundle_adjuster_keyframes.cpp
+        limo/keyframe_bundle_adjustment/src/definitions.cpp
+        limo/keyframe_bundle_adjustment/src/keyframe.cpp
+        limo/keyframe_bundle_adjustment/src/keyframe_rejection_scheme_flow.cpp
+        limo/keyframe_bundle_adjustment/src/keyframe_selection_scheme_pose.cpp
+        limo/keyframe_bundle_adjustment/src/keyframe_selector.cpp
+        limo/keyframe_bundle_adjustment/src/keyframe_sparsification_scheme_time.cpp
+        limo/keyframe_bundle_adjustment/src/landmark_selection_scheme_add_depth.cpp
+        limo/keyframe_bundle_adjustment/src/landmark_selection_scheme_cheirality.cpp
+        limo/keyframe_bundle_adjustment/src/landmark_selection_scheme_helpers.cpp
+        limo/keyframe_bundle_adjustment/src/landmark_selection_scheme_observability.cpp
+        limo/keyframe_bundle_adjustment/src/landmark_selection_scheme_random.cpp
+        limo/keyframe_bundle_adjustment/src/landmark_selection_scheme_voxel.cpp
+        limo/keyframe_bundle_adjustment/test/keyframe_bundle_adjustment.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/commons/color_by_index_hsv.hpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/commons/general_helpers.hpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/commons/publish_helpers.hpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/mono_lidar/mono_lidar.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/mono_lidar/mono_lidar.hpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/mono_lidar/mono_lidar_node.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/mono_lidar/mono_lidar_nodelet.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/mono_standalone/mono_standalone.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/mono_standalone/mono_standalone.hpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/mono_standalone/mono_standalone_node.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/src/mono_standalone/mono_standalone_nodelet.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/test/mono_lidar_node.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/test/mono_lidar_nodelet.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/test/mono_standalone_node.cpp
+        limo/keyframe_bundle_adjustment_ros_tool/test/mono_standalone_nodelet.cpp
+        limo/matches_msg_types/include/matches_msg_types/feature_point.hpp
+        limo/matches_msg_types/include/matches_msg_types/feature_point_depth.hpp
+        limo/matches_msg_types/include/matches_msg_types/tracklet.hpp
+        limo/matches_msg_types/include/matches_msg_types/tracklets.hpp
+        limo/matches_msg_types/test/matches_msg_types.cpp
+        limo/robust_optimization/include/robust_optimization/internal/apply_trimmer.hpp
+        limo/robust_optimization/include/robust_optimization/internal/definitions.hpp
+        limo/robust_optimization/include/robust_optimization/internal/trimmer_fix.hpp
+        limo/robust_optimization/include/robust_optimization/internal/trimmer_quantile.hpp
+        limo/robust_optimization/include/robust_optimization/robust_solving.hpp
+        limo/robust_optimization/src/robust_solving.cpp
+        limo/robust_optimization/test/robust_optimization.cpp
+        limo/util_nodes_tf2_ros_tool/src/static_transform_alias/static_transform_alias.cpp
+        limo/util_nodes_tf2_ros_tool/src/static_transform_alias/static_transform_alias.hpp
+        limo/util_nodes_tf2_ros_tool/src/static_transform_alias/static_transform_alias_node.cpp
+        limo/util_nodes_tf2_ros_tool/src/static_transform_alias/static_transform_alias_nodelet.cpp
+        limo/util_nodes_tf2_ros_tool/test/test_util_nodes_tf2_ros_tool.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/add_outlier_flag/add_outlier_flag.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/add_outlier_flag/add_outlier_flag.hpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/add_outlier_flag/add_outlier_flag_node.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/add_outlier_flag/add_outlier_flag_nodelet.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/mark_depth_outlier/mark_depth_outlier.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/mark_depth_outlier/mark_depth_outlier.hpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/mark_depth_outlier/mark_depth_outlier_node.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/mark_depth_outlier/mark_depth_outlier_nodelet.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/semantic_labels/semantic_labels.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/semantic_labels/semantic_labels.hpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/semantic_labels/semantic_labels_node.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/src/semantic_labels/semantic_labels_nodelet.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/test/add_outlier_flag_node.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/test/add_outlier_flag_nodelet.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/test/mark_depth_outlier_node.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/test/mark_depth_outlier_nodelet.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/test/semantic_labels_node.cpp
+        mono_lidar_depth/matches_conversion_ros_tool/test/semantic_labels_nodelet.cpp
+        mono_lidar_depth/matches_msg_conversions_ros/include/matches_msg_conversions_ros/convert.hpp
+        mono_lidar_depth/matches_msg_conversions_ros/include/matches_msg_conversions_ros/convert_opencv3.hpp
+        mono_lidar_depth/matches_msg_conversions_ros/src/convert.cpp
+        mono_lidar_depth/matches_msg_conversions_ros/src/convert_opencv3.cpp
+        mono_lidar_depth/matches_msg_conversions_ros/test/test_matches_msg_conversions_ros.cpp
+        mono_lidar_depth/matches_msg_depth_ros/test/test_matches_msg_depth_ros.cpp
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/camera_pinhole.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/DepthCalcHistBag.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/DepthCalcHistPoint.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/DepthCalcStatsSinglePoint.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/DepthCalculationStatistics.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/DepthEstimator.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/DepthEstimatorParameters.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/eDepthResultType.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/ErrorPlane.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/eTresholdDepthMode.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/eTresholdResult.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/GeometryHelper.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/HelperLidarRowSegmentation.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/Histogram.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/HistogramBin.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/HistogramPointDepth.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/LinePlaneIntersectionBase.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/LinePlaneIntersectionCeckXZTreshold.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/LinePlaneIntersectionNormal.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/LinePlaneIntersectionOrthogonalTreshold.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/Logger.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/NeighborFinderBase.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/NeighborFinderPixel.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/NNParams.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/PCA.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/PlaneEstimationCalcMaxSpanningTriangle.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/PlaneEstimationCheckPlanar.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/PlaneEstimationLeastSquares.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/PlaneEstimationMEstimator.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/PointcloudData.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/PointData.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/RansacPlane.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/RoadDepthEstimatorBase.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/RoadDepthEstimatorLeastSquares.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/RoadDepthEstimatorMaxSpanningTriangle.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/RoadDepthEstimatorMEstimator.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/TresholdDepthGlobal.h
+        mono_lidar_depth/monolidar_fusion/include/monolidar_fusion/TresholdDepthLocal.h
+        mono_lidar_depth/monolidar_fusion/src/DepthCalculationStatistics.cpp
+        mono_lidar_depth/monolidar_fusion/src/DepthEstimator.cpp
+        mono_lidar_depth/monolidar_fusion/src/DepthEstimatorParameters.cpp
+        mono_lidar_depth/monolidar_fusion/src/GeometryHelper.cpp
+        mono_lidar_depth/monolidar_fusion/src/HelperLidarRowSegmentation.cpp
+        mono_lidar_depth/monolidar_fusion/src/Histogram.cpp
+        mono_lidar_depth/monolidar_fusion/src/HistogramPointDepth.cpp
+        mono_lidar_depth/monolidar_fusion/src/LinePlaneIntersectionBase.cpp
+        mono_lidar_depth/monolidar_fusion/src/LinePlaneIntersectionCeckXZTreshold.cpp
+        mono_lidar_depth/monolidar_fusion/src/LinePlaneIntersectionNormal.cpp
+        mono_lidar_depth/monolidar_fusion/src/LinePlaneIntersectionOrthogonalTreshold.cpp
+        mono_lidar_depth/monolidar_fusion/src/Logger.cpp
+        mono_lidar_depth/monolidar_fusion/src/NeighborFinderBase.cpp
+        mono_lidar_depth/monolidar_fusion/src/NeighborFinderPixel.cpp
+        mono_lidar_depth/monolidar_fusion/src/PCA.cpp
+        mono_lidar_depth/monolidar_fusion/src/PlaneEstimationCalcMaxSpanningTriangle.cpp
+        mono_lidar_depth/monolidar_fusion/src/PlaneEstimationCheckPlanar.cpp
+        mono_lidar_depth/monolidar_fusion/src/PlaneEstimationLeastSquares.cpp
+        mono_lidar_depth/monolidar_fusion/src/PlaneEstimationMEstimator.cpp
+        mono_lidar_depth/monolidar_fusion/src/RansacPlane.cpp
+        mono_lidar_depth/monolidar_fusion/src/RoadDepthEstimatorBase.cpp
+        mono_lidar_depth/monolidar_fusion/src/RoadDepthEstimatorLeastSquares.cpp
+        mono_lidar_depth/monolidar_fusion/src/RoadDepthEstimatorMaxSpanningTriangle.cpp
+        mono_lidar_depth/monolidar_fusion/src/RoadDepthEstimatorMEstimator.cpp
+        mono_lidar_depth/monolidar_fusion/src/TresholdDepthGlobal.cpp
+        mono_lidar_depth/monolidar_fusion/src/TresholdDepthLocal.cpp
+        mono_lidar_depth/monolidar_fusion/test/test_monolidar_fusion.cpp
+        mono_lidar_depth/tracklets_depth_ros_tool/src/tracklet_depth_node/parameters.cpp
+        mono_lidar_depth/tracklets_depth_ros_tool/src/tracklet_depth_node/parameters.h
+        mono_lidar_depth/tracklets_depth_ros_tool/src/tracklet_depth_node/TempTrackletFrame.h
+        mono_lidar_depth/tracklets_depth_ros_tool/src/tracklet_depth_node/tracklet_depth.cpp
+        mono_lidar_depth/tracklets_depth_ros_tool/src/tracklet_depth_node/tracklet_depth.h
+        mono_lidar_depth/tracklets_depth_ros_tool/src/tracklet_depth_node/tracklet_depth_node.cpp
+        mono_lidar_depth/tracklets_depth_ros_tool/src/tracklet_depth_node/tracklet_depth_nodelet.cpp
+        mono_lidar_depth/tracklets_depth_ros_tool/test/test_tracklets_depth_ros_tool.cpp
+        rosinterface_handler/include/rosinterface_handler/diagnostic_subscriber.hpp
+        rosinterface_handler/include/rosinterface_handler/utilities.hpp
+        rosinterface_handler/test/src/test_defaults.cpp
+        rosinterface_handler/test/src/test_defaultsAtLaunch.cpp
+        rosinterface_handler/test/src/test_defaultsMissing.cpp
+        rosinterface_handler/test/src/test_diagnosed_subscriber.cpp
+        rosinterface_handler/test/src/test_main.cpp
+        rosinterface_handler/test/src/test_minMax.cpp
+        viso2/include/viso2/filter.h
+        viso2/include/viso2/matcher.h
+        viso2/include/viso2/matrix.h
+        viso2/include/viso2/reconstruction.h
+        viso2/include/viso2/timer.h
+        viso2/include/viso2/triangle.h
+        viso2/include/viso2/viso.h
+        viso2/include/viso2/viso_mono.h
+        viso2/include/viso2/viso_stereo.h
+        viso2/matlab/demo_matching_flow.m
+        viso2/matlab/demo_matching_quad.m
+        viso2/matlab/demo_matching_stereo.m
+        viso2/matlab/demo_matching_tracking.m
+        viso2/matlab/demo_structure_from_motion.m
+        viso2/matlab/demo_viso_mono.m
+        viso2/matlab/demo_viso_stereo.m
+        viso2/matlab/make.m
+        viso2/matlab/matcherMex.cpp
+        viso2/matlab/plotMatch.m
+        viso2/matlab/plotTrack.m
+        viso2/matlab/reconstructionMex.cpp
+        viso2/matlab/visualOdometryMonoMex.cpp
+        viso2/matlab/visualOdometryStereoMex.cpp
+        viso2/src/filter.cpp
+        viso2/src/matcher.cpp
+        viso2/src/matrix.cpp
+        viso2/src/reconstruction.cpp
+        viso2/src/triangle.cpp
+        viso2/src/viso.cpp
+        viso2/src/viso_mono.cpp
+        viso2/src/viso_stereo.cpp)
