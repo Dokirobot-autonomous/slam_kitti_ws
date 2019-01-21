@@ -30,6 +30,10 @@ limo/robust_optimization/src/robust_solving.cpp
 bundle_adjuster_keyframes.hpp
     std::map<KeyframeId, Keyframe::Ptr> keyframes_; // 位置情報を保管，Keyframe->getEigenPose()で取得
 
+5,3はPnP問題
+3,3,3..,2,1はバンドルアジャストメント
+1の影響が強すぎて楕円が円状に出てくる
+
 
 // pathのpublish
 mono_lidar.cpp

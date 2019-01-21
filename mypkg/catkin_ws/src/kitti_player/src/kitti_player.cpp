@@ -54,9 +54,11 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 #include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
 #include <nav_msgs/Path.h>
 #include <time.h>
 #include <thread>
+#include <rosbag/bag.h>
 
 using namespace std;
 using namespace pcl;
@@ -111,7 +113,7 @@ void synchCallback(const std_msgs::Bool::ConstPtr& msg)
  * @param header Header to use to publish the message
  * @return 1 if file is correctly readed, 0 otherwise
  */
-int publish_velodyne(ros::Publisher &pub, string infile, std_msgs::Header *header)
+int publish_velodyne(ros::Publisher &pub, string infile, std_msgs::Header *header,rosbag::Bag &bag)
 {
     fstream input(infile.c_str(), ios::in | ios::binary);
     if (!input.good())
@@ -143,12 +145,15 @@ int publish_velodyne(ros::Publisher &pub, string infile, std_msgs::Header *heade
         pc2.header.stamp = header->stamp;
         points->header = pcl_conversions::toPCL(pc2.header);
         pub.publish(points);
+        std::string str=pub.getTopic();
+        ros::Time add_time;
+        bag.write(str,add_time.fromSec(1.0+pc2.header.stamp.toSec()),points);
 
         return 1;
     }
 }
 
-int publish_groundtruth(ros::Publisher &pub_pose,ros::Publisher &pub_path, string pose_str, std_msgs::Header *header)
+int publish_groundtruth(ros::Publisher &pub_pose,ros::Publisher &pub_path, string pose_str, std_msgs::Header *header,rosbag::Bag &bag)
 {
     geometry_msgs::PoseStamped pose;
     static nav_msgs::Path path;
@@ -178,7 +183,7 @@ int publish_groundtruth(ros::Publisher &pub_pose,ros::Publisher &pub_path, strin
     tf::Matrix3x3 m(P[0],P[1],P[2],P[4],P[5],P[6],P[8],P[9],P[10]);
     double roll,pitch,yaw;
     m.getRPY(roll,pitch,yaw);
-    pitch-=M_PI/2.0;
+    //pitch-=M_PI/2.0;
     tf::Quaternion q;
     q.setRPY(roll,pitch,yaw);
     //ROS_INFO("...ok");
@@ -201,6 +206,9 @@ int publish_groundtruth(ros::Publisher &pub_pose,ros::Publisher &pub_path, strin
     path.poses.push_back(pose);
     pub_pose.publish(pose);
     pub_path.publish(path);
+    ros::Time add_time;
+    bag.write(pub_pose.getTopic(),add_time.fromSec(1.0+pose.header.stamp.toSec()),pose);
+    bag.write(pub_path.getTopic(),add_time.fromSec(1.0+path.header.stamp.toSec()),path);
 
     //ROS_INFO("...ok");
 
@@ -691,6 +699,7 @@ int main(int argc, char **argv)
     string dir_timestamp_groundtruth; //average of start&end (time of scan)
     string str_support;
     static tf2_ros::StaticTransformBroadcaster static_broadcaster;
+    tf2_msgs::TFMessage tf_msgs;
     cv::Mat cv_image00;
     cv::Mat cv_image01;
     cv::Mat cv_image02;
@@ -705,6 +714,16 @@ int main(int argc, char **argv)
     pub_clock=node.advertise<rosgraph_msgs::Clock>("clock",1000);
 
     image_transport::ImageTransport it(node);
+
+    std::string topic_name_img00="/sensor/camera/grayscale/left/image_rect";
+    std::string topic_name_img01="/sensor/camera/grayscale/right/image_rect";
+    std::string topic_name_img02="/sensor/camera/color/left/image_rect";
+    std::string topic_name_img02_label="/sensor/camera/color_labels/left/image_rect";
+    std::string topic_name_img03="/sensor/camera/color/right/image_rect";
+    std::string topic_name_velodyne="/sensor/velodyne/cloud_euclidean";
+    std::string topic_name_groundpose="/groundtruth_pose/pose";
+    std::string topic_name_groundpath="/groundtruth_pose/path";
+
 /*
     image_transport::CameraPublisher pub00 = it.advertiseCamera("sensor/camera/grayscale/left/image_rect", 1);
     image_transport::CameraPublisher pub01 = it.advertiseCamera("sensor/camera/grayscale/right/image_rect", 1);
@@ -713,13 +732,13 @@ int main(int argc, char **argv)
 */
     image_transport::CameraPublisher pub00,pub01,pub02,pub02_label,pub03;
     if(options.grayscale){
-        pub00= it.advertiseCamera("sensor/camera/grayscale/left/image_rect", 1);
-        pub01 = it.advertiseCamera("sensor/camera/grayscale/right/image_rect", 1);
+        pub00= it.advertiseCamera(topic_name_img00, 1);
+        pub01 = it.advertiseCamera(topic_name_img01, 1);
     }
     if(options.color) {
-        pub02 = it.advertiseCamera("sensor/camera/color/left/image_rect", 1);
-        pub02_label = it.advertiseCamera("sensor/camera/color_label/left/image_rect", 1);
-        pub03 = it.advertiseCamera("sensor/camera/color/right/image_rect", 1);
+        pub02 = it.advertiseCamera(topic_name_img02, 1);
+        pub02_label = it.advertiseCamera(topic_name_img02_label, 1);
+        pub03 = it.advertiseCamera(topic_name_img03, 1);
     }
     sensor_msgs::Image ros_msg00;
     sensor_msgs::Image ros_msg01;
@@ -745,7 +764,7 @@ int main(int argc, char **argv)
 */
     ros::Publisher map_pub,gps_pub,gps_pub_initial,imu_pub,disp_pub,groundpose_pub,groundpath_pub;
     if(options.velodyne){
-        map_pub = node.advertise<pcl::PointCloud<pcl::PointXYZ> >  ("sensor/velodyne/cloud_euclidean", 1, true);
+        map_pub = node.advertise<pcl::PointCloud<pcl::PointXYZ> >  (topic_name_velodyne, 1, true);
     }
     if(options.gps){
         gps_pub           = node.advertise<sensor_msgs::NavSatFix>           ("oxts/gps", 1, true);
@@ -758,8 +777,8 @@ int main(int argc, char **argv)
         disp_pub          = node.advertise<stereo_msgs::DisparityImage>      ("preprocessed_disparity", 1, true);
     }
     if(options.groundtruth){
-        groundpose_pub        = node.advertise<geometry_msgs::PoseStamped>      ("groundtruth_pose/pose",1,true);
-        groundpath_pub        = node.advertise<nav_msgs::Path>      ("groundtruth_pose/path",1,true);
+        groundpose_pub        = node.advertise<geometry_msgs::PoseStamped>      (topic_name_groundpose,1,true);
+        groundpath_pub        = node.advertise<nav_msgs::Path>      (topic_name_groundpath,1,true);
     }
 
 
@@ -1054,6 +1073,9 @@ int main(int argc, char **argv)
 
     // CAMERA INFO SECTION: read one for all
 
+    rosbag::Bag bag;
+    bag.open(dir_root+"/test.bag",rosbag::bagmode::Write);
+
     ros_cameraInfoMsg_camera00.header.stamp = ros::Time::now();
     ros_cameraInfoMsg_camera00.header.frame_id = "/sensor/camera/grayscale/left";
     ros_cameraInfoMsg_camera00.height = 0;
@@ -1124,7 +1146,8 @@ int main(int argc, char **argv)
         tf_r.child_frame_id=ros_cameraInfoMsg_camera03.header.frame_id;
         static_broadcaster.sendTransform(tf_l);
         static_broadcaster.sendTransform(tf_r);
-
+        tf_msgs.transforms.push_back(tf_l);
+        tf_msgs.transforms.push_back(tf_r);
     }
 
     if (options.grayscale || options.all_data)
@@ -1167,8 +1190,12 @@ int main(int argc, char **argv)
         tf_l.header.stamp.nsec=tf_r.header.stamp.nsec=1;
         tf_l.child_frame_id=ros_cameraInfoMsg_camera00.header.frame_id;
         tf_r.child_frame_id=ros_cameraInfoMsg_camera01.header.frame_id;
+
         static_broadcaster.sendTransform(tf_l);
         static_broadcaster.sendTransform(tf_r);
+
+        tf_msgs.transforms.push_back(tf_l);
+        tf_msgs.transforms.push_back(tf_r);
     }
 
     // Publish TF from velodyne to left_grayscalse
@@ -1183,7 +1210,11 @@ int main(int argc, char **argv)
         tf.header.frame_id="/sensor/camera";
         tf.child_frame_id="/sensor/velodyne";
         static_broadcaster.sendTransform(tf);
+        tf_msgs.transforms.push_back(tf);
     }
+
+    ros::Time time;
+    bag.write("/tf",time.fromNSec(1),tf_msgs);
 
 
     boost::progress_display progress(total_entries) ;
@@ -1194,6 +1225,8 @@ int main(int argc, char **argv)
     clock_t loop_start, loop_end;
     double exe_time;
 
+//    std::cout<< "Press 'enter' to start!" <<std::endl;
+//    std::cin.ignore();
     // This is the main KITTI_PLAYER Loop
     do
     {
@@ -1254,6 +1287,7 @@ int main(int argc, char **argv)
             cv_image04.convertTo(dmat, dmat.type());
 
             disp_pub.publish(disp_msg);
+
 
         }
 
@@ -1373,6 +1407,15 @@ int main(int argc, char **argv)
             pub02_label.publish(ros_msg02_label, ros_cameraInfoMsg_camera02);
             pub03.publish(ros_msg03, ros_cameraInfoMsg_camera03);
 
+
+            ros::Time add_time;
+            bag.write(topic_name_img02,add_time.fromSec(1.0+ros_msg02.header.stamp.toSec()),ros_msg02);
+            bag.write("/sensor/camera/color/left/camera_info",add_time.fromSec(1.0+ros_cameraInfoMsg_camera02.header.stamp.toSec()),ros_cameraInfoMsg_camera02);
+            bag.write(topic_name_img02_label,add_time.fromSec(1.0+ros_msg02_label.header.stamp.toSec()),ros_msg02_label);
+            bag.write("/sensor/camera/color_labels/left/camera_info",add_time.fromSec(1.0+ros_cameraInfoMsg_camera02.header.stamp.toSec()),ros_cameraInfoMsg_camera02);
+            bag.write(topic_name_img03,add_time.fromSec(1.0+ros_msg03.header.stamp.toSec()),ros_msg03);
+            bag.write("/sensor/camera/color/right/camera_info",add_time.fromSec(1.0+ros_cameraInfoMsg_camera03.header.stamp.toSec()),ros_cameraInfoMsg_camera03);
+
         }
 
         if (options.grayscale || options.all_data)
@@ -1454,6 +1497,11 @@ int main(int argc, char **argv)
             pub00.publish(ros_msg00, ros_cameraInfoMsg_camera00);
             pub01.publish(ros_msg01, ros_cameraInfoMsg_camera01);
 
+            ros::Time add_time;
+            bag.write(topic_name_img00,add_time.fromSec(1.0+ros_msg00.header.stamp.toSec()),ros_msg00);
+            bag.write("/sensor/camera/grayscale/left/camera_info",add_time.fromSec(1.0+ros_cameraInfoMsg_camera00.header.stamp.toSec()),ros_cameraInfoMsg_camera00);
+            bag.write(topic_name_img01,add_time.fromSec(1.0+ros_msg01.header.stamp.toSec()),ros_msg01);
+            bag.write("/sensor/camera/grayscale/right/camera_info",add_time.fromSec(1.0+ros_cameraInfoMsg_camera01.header.stamp.toSec()),ros_cameraInfoMsg_camera01);
         }
 
         if (options.velodyne || options.all_data)
@@ -1463,7 +1511,7 @@ int main(int argc, char **argv)
 
             if (!options.timestamps){
                 ROS_DEBUG("Without time stamps");
-                publish_velodyne(map_pub, full_filename_velodyne, &header_support);
+                publish_velodyne(map_pub, full_filename_velodyne, &header_support,bag);
             }
             else
             {
@@ -1480,7 +1528,8 @@ int main(int argc, char **argv)
                 timestamps.seekg(13 * entries_played);
                 getline(timestamps, str_support);
                 header_support.stamp = parseTime(str_support).stamp;
-                publish_velodyne(map_pub, full_filename_velodyne, &header_support);
+//                publish_velodyne(map_pub, full_filename_velodyne, &header_support);
+                publish_velodyne(map_pub, full_filename_velodyne, &header_support,bag);
             }
         }
 
@@ -1515,7 +1564,7 @@ int main(int argc, char **argv)
                     getline(poses, str_support);
                 }
 //                ROS_INFO_STREAM(entries_played<<","<<str_support);
-                int fin=publish_groundtruth(groundpose_pub,groundpath_pub,str_support,&header_support);
+                int fin=publish_groundtruth(groundpose_pub,groundpath_pub,str_support,&header_support,bag);
                 if(fin==1){
                     break;
                 }
@@ -1640,24 +1689,42 @@ int main(int argc, char **argv)
 
         }
 
-        clock_msgs.clock.sec=header_support.stamp.sec;
-        clock_msgs.clock.nsec=header_support.stamp.nsec;
-        pub_clock.publish(clock_msgs);
+        {
+            str_support = dir_timestamp_groundtruth + "times.txt";
+            ifstream timestamps(str_support.c_str());
+            if (!timestamps.is_open())
+            {
+                //ROS_ERROR_STREAM("Fail to open " << timestamps);
+                node.shutdown();
+                return -1;
+            }
+            // times.txtの一行の文字数*entries_playedにする
+            timestamps.seekg(13 * entries_played);
+            getline(timestamps, str_support);
+            header_support.stamp = parseTime(str_support).stamp;
+            clock_msgs.clock.fromSec(header_support.stamp.toSec());
+            pub_clock.publish(clock_msgs);
+
+            ros::Time add_time;
+            bag.write("/tf",add_time.fromSec(1.0+header_support.stamp.toSec()),tf_msgs);
+        }
 
         ++progress;
         node.setParam("entries_played",(int)entries_played);
 
-            while(true){
-                ROS_INFO_STREAM("Wainting for ndt_node first pose");
-                int tmp=1;
-                std::string str="/ndt_mapping_tku/callback_num";
-                node.getParam(str,tmp);
-                if(tmp==entries_played || !ros::ok()){
-                    break;
-                }
-                std::this_thread::sleep_for(std::chrono::microseconds(1));
+
+//        if(entries_played==0){
+//            while(true){
+//                ROS_INFO_STREAM("Waiting for ndt_node first pose");
+//                int tmp=1;
+//                std::string str="/ndt_mapping_tku/callback_num";
+//                node.getParam(str,tmp);
+//                if(tmp==entries_played || !ros::ok()){
+//                    break;
+//                }
+//                std::this_thread::sleep_for(std::chrono::microseconds(1));
 //            }
-        }
+//        }
 
 
         entries_played++;
@@ -1689,18 +1756,20 @@ int main(int argc, char **argv)
 
 
 
-        loop_end= clock();
-        exe_time = (double)(loop_end-loop_start)/CLOCKS_PER_SEC;
+//        loop_end= clock();
+//        exe_time = (double)(loop_end-loop_start)/CLOCKS_PER_SEC;
+//
+//
+//        if (!options.synchMode){
+//            double period=1.0/(double)options.frequency;
+//            double rest=period-exe_time;
+//            if(rest>0){
+//                std::this_thread::sleep_for(std::chrono::microseconds((int)(rest*1000000.0)));
+//            }
+////            loop_rate.sleep();
+//        }
 
 
-        if (!options.synchMode){
-            double period=1.0/(double)options.frequency;
-            double rest=period-exe_time;
-            if(rest>0){
-                std::this_thread::sleep_for(std::chrono::microseconds((int)(rest*1000000.0)));
-            }
-//            loop_rate.sleep();
-        }
     }
     while (entries_played <= total_entries - 1 && ros::ok());
 
@@ -1720,6 +1789,7 @@ int main(int argc, char **argv)
     ROS_INFO_STREAM("Done!");
     node.setParam("exist_kitti_player",0);
     node.shutdown();
+    bag.close();
 
     return 0;
 }

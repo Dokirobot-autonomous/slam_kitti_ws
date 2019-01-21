@@ -23,7 +23,7 @@ namespace ORB_SLAM2
 
 SlamDataPub::SlamDataPub(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath, Map *pMap):
     mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking), mpMap(pMap),
-    mbFinishRequested(false), mbFinished(true), mbStopped(true), mbStopRequested(false)
+    mbFinishRequested(false), mbFinished(true), mbStopped(true), mbStopRequested(false),mbGetNewCamPose(false),mbGetNewCamPoseWithCov(false),mTimeStamp(0.0)
 {
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
 
@@ -62,19 +62,22 @@ void SlamDataPub::TrackingDataPub()
     geometry_msgs::PoseStamped camPose2Ground;
     geometry_msgs::PoseWithCovarianceStamped camPoseWithCov2Ground;
     geometry_msgs::PoseStamped vehiclePose2Ground;
+    geometry_msgs::PoseWithCovarianceStamped vehiclePoseWithCov2Ground;
 
     nav_msgs::Path cameraPath, vehiclePath;
     while(1)
-    { 
-	  if(mbGetNewCamPose && mbGetNewCamPoseWithCov)
-	  {
+    {
+        if(mbGetNewCamPose && mbGetNewCamPoseWithCov){
+
 	      GetCurrentROSCameraMatrix(camPose2Ground);
 		  GetCurrentROSCameraWithCovarianceMatrix(camPoseWithCov2Ground);
 	      GetCurrentROSVehicleMatrix(vehiclePose2Ground);
+	      GetCurrentROSVehicleWithCovarianceMatrix(vehiclePoseWithCov2Ground);
 	      GetCurrentROSTrajectories(cameraPath, vehiclePath);
 	      CamPose_pub_.publish(camPose2Ground);
 		  CamPoseWithCov_pub_.publish(camPoseWithCov2Ground);
 		  VehiclePose_pub_.publish(vehiclePose2Ground);
+		  VehiclePoseWithCov_pub_.publish(vehiclePoseWithCov2Ground);
 	      CamPath_pub_.publish(cameraPath);   // KeyFrames
 	      VehiclePath_pub_.publish(vehiclePath);
 	      
@@ -85,11 +88,14 @@ void SlamDataPub::TrackingDataPub()
 	      float tf_x = vehiclePose2Ground.pose.position.x;
 	      float tf_y = vehiclePose2Ground.pose.position.y;
 	      float tf_z = vehiclePose2Ground.pose.position.z;
-	      
+
+	      std::cout<<mTimeStamp <<std::endl;
+	      ros::Time t;
+	      t.fromSec(mTimeStamp);
 	      Vehicle2Ground_broadcaster_.sendTransform(
 		  tf::StampedTransform(
 		  tf::Transform(tf::Quaternion(tf_q_x,tf_q_y,tf_q_z,tf_q_w), tf::Vector3(tf_x, tf_y, tf_z)),
-		  ros::Time::now(),"orb_map", "vehicle"));
+		  t,"orb_map", "vehicle"));
 	    
 	  }
 	  if(CheckFinish())
@@ -123,7 +129,7 @@ void SlamDataPub::DrawFramePub()
     cv_bridge::CvImage cvi;
     cvi.header.frame_id = "image";
     cvi.encoding = "bgr8";
-    cvi.header.stamp = ros::Time::now();
+    cvi.header.stamp.sec = mTimeStamp;
     while(1)
     {
 // 	if(mbGetNewCamPose)
@@ -151,6 +157,7 @@ void SlamDataPub::Run()
     CamPose_pub_ = nh.advertise<geometry_msgs::PoseStamped >("camera_pose",1);
     CamPoseWithCov_pub_=nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose_with_covariance",1);
     VehiclePose_pub_ = nh.advertise<geometry_msgs::PoseStamped >("vehicle_pose",1);
+    VehiclePoseWithCov_pub_=nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("vehicle_pose_with_covariance",1);
     CamPath_pub_ = nh.advertise<nav_msgs::Path>("camera_path",1);
     VehiclePath_pub_ = nh.advertise<nav_msgs::Path>("vehicle_path",1);
     AllPointCloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("point_cloud_all",1);
@@ -237,7 +244,15 @@ void SlamDataPub::SetCurrentCameraPose(const cv::Mat &Tcw)
     mbGetNewCamPose = true;
 }
 
-void SlamDataPub::SetCurrentCameraPoseCovariance(const cv::Mat &Cov)
+void SlamDataPub::SetCurrentCameraPose(const cv::Mat &Tcw,double timestamp)
+{
+    unique_lock<mutex> lock(mMutexCamera);
+    mCameraPose = Tcw.clone();
+    mbGetNewCamPose = true;
+    mTimeStamp=timestamp;
+}
+
+    void SlamDataPub::SetCurrentCameraPoseCovariance(const cv::Mat &Cov)
 {
 	unique_lock<mutex> lock(mMutexCamera);
 	mCameraPoseCovariance = Cov.clone();
@@ -272,7 +287,9 @@ void SlamDataPub::GetCurrentROSCameraMatrix(geometry_msgs::PoseStamped &cam_pose
 	  cam_pose.pose.orientation.w = q.w();
 	  
 	  cam_pose.header.frame_id = "orb_map";
-	  cam_pose.header.stamp = ros::Time::now();  
+	  cam_pose.header.stamp.fromSec(mTimeStamp);
+//	  cam_pose.header.stamp.sec=mTimeStamp;
+//	  cam_pose.header.stamp = ros::Time::now();
 	  
 	  mbGetNewCamPose = false;
       }
@@ -332,7 +349,7 @@ void SlamDataPub::GetCurrentROSCameraWithCovarianceMatrix(geometry_msgs::PoseWit
 
 
 		cam_pose_with_cov.header.frame_id = "orb_map";
-		cam_pose_with_cov.header.stamp = ros::Time::now();
+		cam_pose_with_cov.header.stamp.fromSec(mTimeStamp);
 
 		mbGetNewCamPoseWithCov = false;
 	}
@@ -344,29 +361,78 @@ void SlamDataPub::GetCurrentROSCameraWithCovarianceMatrix(geometry_msgs::PoseWit
 
 void SlamDataPub::GetCurrentROSVehicleMatrix(geometry_msgs::PoseStamped &vehicle_pose)
 {
-      if(!mCameraPose.empty())
-      {
-	Eigen::Matrix4f vehicle_pose2ground;
-	{
-	    vehicle_pose2ground = mCam2GroundNow_T * mTrans_cam2vehicle.inverse();
-	}
-	{
-	    mVehicle2GroundNow_T = vehicle_pose2ground;
-	}
-	vehicle_pose.pose.position.x = vehicle_pose2ground(0,3);
-	vehicle_pose.pose.position.y  = vehicle_pose2ground(1,3);
-	vehicle_pose.pose.position.z  = vehicle_pose2ground(2,3);
-	  
-	Eigen::Matrix3f Rwc = vehicle_pose2ground.block<3,3>(0,0);
-	Eigen::Quaternionf q(Rwc);
-	vehicle_pose.pose.orientation.x = q.x();
-	vehicle_pose.pose.orientation.y = q.y();
-	vehicle_pose.pose.orientation.z = q.z();
-	vehicle_pose.pose.orientation.w = q.w();
-	
-	vehicle_pose.header.frame_id = "orb_map";
-	vehicle_pose.header.stamp = ros::Time::now();  	
-      }
+    if (!mCameraPose.empty()) {
+        Eigen::Matrix4f vehicle_pose2ground;
+        {
+            vehicle_pose2ground = mCam2GroundNow_T * mTrans_cam2vehicle.inverse();
+        }
+        {
+            mVehicle2GroundNow_T = vehicle_pose2ground;
+        }
+        vehicle_pose.pose.position.x = vehicle_pose2ground(0, 3);
+        vehicle_pose.pose.position.y = vehicle_pose2ground(1, 3);
+        vehicle_pose.pose.position.z = vehicle_pose2ground(2, 3);
+
+        Eigen::Matrix3f Rwc = vehicle_pose2ground.block<3, 3>(0, 0);
+        Eigen::Quaternionf q(Rwc);
+        vehicle_pose.pose.orientation.x = q.x();
+        vehicle_pose.pose.orientation.y = q.y();
+        vehicle_pose.pose.orientation.z = q.z();
+        vehicle_pose.pose.orientation.w = q.w();
+
+        vehicle_pose.header.frame_id = "orb_map";
+        vehicle_pose.header.stamp.fromSec(mTimeStamp);
+    }
+}
+
+void SlamDataPub::GetCurrentROSVehicleWithCovarianceMatrix(geometry_msgs::PoseWithCovarianceStamped &vehicle_pose_with_cov) {
+
+    if(!mCameraPose.empty() && !mCameraPoseCovariance.empty()){
+        Eigen::Matrix4f vehicle_pose2ground;
+        {
+            vehicle_pose2ground = mCam2GroundNow_T * mTrans_cam2vehicle.inverse();
+        }
+        {
+            mVehicle2GroundNow_T = vehicle_pose2ground;
+        }
+        vehicle_pose_with_cov.pose.pose.position.x = vehicle_pose2ground(0, 3);
+        vehicle_pose_with_cov.pose.pose.position.y = vehicle_pose2ground(1, 3);
+        vehicle_pose_with_cov.pose.pose.position.z = vehicle_pose2ground(2, 3);
+
+        Eigen::Matrix3f Rwc = vehicle_pose2ground.block<3, 3>(0, 0);
+        Eigen::Quaternionf q(Rwc);
+        vehicle_pose_with_cov.pose.pose.orientation.x = q.x();
+        vehicle_pose_with_cov.pose.pose.orientation.y = q.y();
+        vehicle_pose_with_cov.pose.pose.orientation.z = q.z();
+        vehicle_pose_with_cov.pose.pose.orientation.w = q.w();
+
+//        /* covariance */
+//        Eigen::MatrixXf trans(6,6);
+//        trans.block<3,3>(0,0)=mTrans_cam2vehicle.block<3,3>(0,0);
+//        trans.block<3,3>(3,0)=trans.block<3,3>(0,3)=Eigen::MatrixXf::Zero(3,3);
+//        trans.block<3,3>(3,3)=Eigen::MatrixXf::Identity(3,3);
+//        Eigen::MatrixXf cam_cov(6,6);
+//        for(int i=0;i<6;i++){
+//            for(int j=0;j<6;j++){
+//                cam_cov(j,i)=mCameraPoseCovariance.at<float>(j,i);
+//            }
+//        }
+//        Eigen::MatrixXf vehicle_cov(6,6);
+//        vehicle_cov=trans*cam_cov*trans.transpose();
+
+        for(int i=0;i<6;i++){
+            for(int j=0;j<6;j++){
+                vehicle_pose_with_cov.pose.covariance[i*6+j]=mCameraPoseCovariance.at<float>(j,i);
+            }
+        }
+
+        vehicle_pose_with_cov.header.frame_id = "orb_map";
+        vehicle_pose_with_cov.header.stamp.fromSec(mTimeStamp);
+
+
+    }
+
+
 }
 
 void SlamDataPub::GetCurrentROSTrajectories(nav_msgs::Path &cam_path, nav_msgs::Path &vehicle_path)
@@ -415,9 +481,9 @@ void SlamDataPub::GetCurrentROSTrajectories(nav_msgs::Path &cam_path, nav_msgs::
 	      cam_path_temp.poses.push_back(cam_pose);	     
 	  }
  	  cam_path_temp.header.frame_id = "orb_map";
- 	  cam_path_temp.header.stamp = ros::Time::now();   
+ 	  cam_path_temp.header.stamp.fromSec(mTimeStamp);
 	  vehicle_path_temp.header.frame_id = "orb_map";
-	  vehicle_path_temp.header.stamp = ros::Time::now(); 
+	  vehicle_path_temp.header.stamp.fromSec(mTimeStamp);
 	  
 	  cam_path = cam_path_temp;
 	  vehicle_path = vehicle_path_temp;
@@ -462,7 +528,7 @@ void SlamDataPub::GetCurrentROSAllPointCloud( sensor_msgs::PointCloud2 &all_poin
     pcl::toPCLPointCloud2(*cloud_all, pcl_pc1);    // pcl::PointXYZRGBA -> pcl::PCLPointCloud2
     pcl_conversions::fromPCL(pcl_pc1, all_point_cloud);  // pcl::PCLPointCloud2 -> sensor_msgs::PointCloud2
     all_point_cloud.header.frame_id = "orb_map";
-    all_point_cloud.header.stamp = ros::Time::now();   
+    all_point_cloud.header.stamp.fromSec(mTimeStamp);
   
     for(set<MapPoint*>::iterator sit=spRefMPs.begin(), send=spRefMPs.end(); sit!=send; sit++)
     {
@@ -489,7 +555,7 @@ void SlamDataPub::GetCurrentROSAllPointCloud( sensor_msgs::PointCloud2 &all_poin
     pcl::toPCLPointCloud2(*cloud_ref, pcl_pc2); // pcl::PointXYZRGBA -> pcl::PCLPointCloud2
     pcl_conversions::fromPCL(pcl_pc2, ref_point_cloud);  // pcl::PCLPointCloud2 -> sensor_msgs::PointCloud2
     ref_point_cloud.header.frame_id = "orb_map";
-    ref_point_cloud.header.stamp = ros::Time::now();   
+    ref_point_cloud.header.stamp.fromSec(mTimeStamp);
 
 }
 

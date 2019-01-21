@@ -368,12 +368,12 @@ void publishPaths(ros::Publisher& path_publisher,
 
 void quatCov2rpyCov(double *pose_quat,double *quat_cov,double *rpy_cov){
 
-  for(int i=0;i<7;i++){
-    for(int j=0;j<7;j++){
-      std::cout<<*(quat_cov+j*7+i)<<"\t";
-    }
-    std::cout<<std::endl;
-  }
+//  for(int i=0;i<7;i++){
+//    for(int j=0;j<7;j++){
+//      std::cout<<*(quat_cov+j*7+i)<<"\t";
+//    }
+//    std::cout<<std::endl;
+//  }
 
   double dd=10e-6; // 推定結果が0.1~1.0の間なので，影響を及ぼさない範囲で変更
   tf::Quaternion quat_origin(*(pose_quat+3),*(pose_quat+4),*(pose_quat+5),*(pose_quat+6));

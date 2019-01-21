@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <rosbag/bag.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
@@ -28,8 +29,8 @@ bool USE_ORB=true;
 bool USE_NDT=true;
 
 #define POSE_NAME_SPTAM "sptam/robot/pose"
-#define POSE_NAME_LIMO "/estimate/complete_path_with_covariance"
-#define POSE_NAME_ORB "/camera_pose_with_covariance"
+#define POSE_NAME_LIMO "/estimate/active_path_with_covariance"
+#define POSE_NAME_ORB "/vehicle_pose_with_covariance"
 #define POSE_NAME_NDT "/current_pose_with_covariance"
 #define POSE_NAME_GROUNDTRUTH "/groundtruth_pose/pose"
 
@@ -137,7 +138,7 @@ void transform(const tf::TransformListener &listener,const geometry_msgs::PoseWi
 
     // Poseの変換
     geometry_msgs::PoseStamped pose_origin,pose_transformed;
-    pose_origin.header=origin.header;
+    pose_origin.header=pose_transformed.header=origin.header;
     pose_origin.pose=origin.pose.pose;
     try {
         listener.transformPose("local_cs",pose_origin.header.stamp,pose_origin,pose_origin.header.frame_id,pose_transformed);
@@ -220,6 +221,7 @@ private:
 //    std::vector<std::string> use_slam_names;
 
     ros::Time current_time;
+
 
 public:
     int slam_num;
@@ -311,7 +313,7 @@ void SlamFusion::initialize(ros::NodeHandle _nh) {
 void SlamFusion::callback_sptam(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg) {
 
     std::string str = POSE_NAME_SPTAM;
-    ROS_DEBUG_STREAM("callback " << str);
+    ROS_DEBUG_STREAM("callback " << str << " : " << msg->header.stamp.toSec());
 
     /***** 座標変換 *****/
     geometry_msgs::PoseWithCovarianceStamped pose_transformed;
@@ -325,35 +327,89 @@ void SlamFusion::callback_sptam(const geometry_msgs::PoseWithCovarianceStamped::
 
     if (existAllPose()) {
         fusion();
+        publish();
     }
 }
 
 void SlamFusion::callback_limo_path(const slam_fusion::PathWithCovariance::ConstPtr &msg) {
 
     std::string str = POSE_NAME_LIMO;
-    ROS_DEBUG_STREAM("callback " << str);
-    for(int i=paths[1].poses_with_covariance.size();i<msg->poses_with_covariance.size();i++){
-        /***** 座標変換 *****/
-        geometry_msgs::PoseWithCovarianceStamped pose_transformed;
-        transform(listener,msg->poses_with_covariance[i],&pose_transformed);
+    ROS_DEBUG_STREAM("callback " << str << " : " << msg->header.stamp.toSec());
 
-        paths[1].poses_with_covariance.push_back(pose_transformed);
+    geometry_msgs::PoseWithCovarianceStamped pose_tmp;
+
+    geometry_msgs::PoseWithCovarianceStamped pose_transformed;
+    if(paths[1].poses_with_covariance.empty()){
+//        int mi=0;
+        for(int i=0;i<msg->poses_with_covariance.size();i++){
+            /***** 座標変換 *****/
+            geometry_msgs::PoseWithCovarianceStamped pose_transformed;
+            transform(listener,msg->poses_with_covariance[i],&pose_transformed);
+
+            if (i==1){
+                pose_tmp=pose_transformed;
+            }
+
+            paths[1].poses_with_covariance.push_back(pose_transformed);
+        }
+    }
+    else{
+        int mi=1;   // msg->pose_with_covariance[0]の共分散は0を含むため除外
+        for(int pi=0;pi<paths[1].poses_with_covariance.size();pi++){
+            if(paths[1].poses_with_covariance[pi].header.stamp.toSec()==msg->poses_with_covariance[mi].header.stamp.toSec()){
+                /***** 座標変換 *****/
+                transform(listener,msg->poses_with_covariance[mi],&pose_transformed);
+                paths[1].poses_with_covariance[pi]=pose_transformed;
+
+                if (mi==1){
+                    pose_tmp=pose_transformed;
+                }
+
+                mi++;
+                if(mi>=msg->poses_with_covariance.size()){
+                    break;
+                }
+            }
+        }
+        for(int i=mi;i<msg->poses_with_covariance.size();i++){
+            /***** 座標変換 *****/
+            geometry_msgs::PoseWithCovarianceStamped pose_transformed;
+            transform(listener,msg->poses_with_covariance[i],&pose_transformed);
+
+            paths[1].poses_with_covariance.push_back(pose_transformed);
+        }
+
     }
 
-    paths[1].header=msg->header;
+//
+//    paths[1].poses_with_covariance.clear();
+//    for(int i=0;i<msg->poses_with_covariance.size();i++){
+//        /***** 座標変換 *****/
+//        geometry_msgs::PoseWithCovarianceStamped pose_transformed;
+//        transform(listener,msg->poses_with_covariance[i],&pose_transformed);
+//
+//        paths[1].poses_with_covariance.push_back(pose_transformed);
+//    }
+//
+//    paths[1].header=msg->header;
 
     ROS_DEBUG_STREAM("size of pose in limo_path: " << msg->poses_with_covariance.size());
+
+//    pub_slam_pose[1].publish(paths[1].poses_with_covariance.back());
+    pub_slam_pose[1].publish(pose_tmp);
+//    pub_slam_pose[1].publish(msg->poses_with_covariance[1]);
 
     get_latest_pose_[1] = true;
     if (existAllPose()) {
         fusion();
+        publish();
     }
 }
 
 void SlamFusion::callback_orb_pose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg) {
 
     std::string str = POSE_NAME_ORB;
-    ROS_DEBUG_STREAM("callback " << str);
+    ROS_DEBUG_STREAM("callback " << str << " : " << msg->header.stamp.toSec());
 
     /***** 座標変換 *****/
 
@@ -366,6 +422,7 @@ void SlamFusion::callback_orb_pose(const geometry_msgs::PoseWithCovarianceStampe
     get_latest_pose_[2] = true;
     if (existAllPose()) {
         fusion();
+        publish();
     }
 
 }
@@ -373,7 +430,7 @@ void SlamFusion::callback_orb_pose(const geometry_msgs::PoseWithCovarianceStampe
 void SlamFusion::callback_ndt_pose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg) {
 
     std::string str = POSE_NAME_NDT;
-    ROS_DEBUG_STREAM("callback " << str);
+    ROS_DEBUG_STREAM("callback " << str << " : " << msg->header.stamp.toSec());
 
     /***** 座標変換 *****/
     geometry_msgs::PoseWithCovarianceStamped pose_transformed;
@@ -385,6 +442,7 @@ void SlamFusion::callback_ndt_pose(const geometry_msgs::PoseWithCovarianceStampe
     get_latest_pose_[3] = true;
     if (existAllPose()) {
         fusion();
+        publish();
     }
 
 }
@@ -392,7 +450,7 @@ void SlamFusion::callback_ndt_pose(const geometry_msgs::PoseWithCovarianceStampe
 void SlamFusion::callback_groundtruth(const geometry_msgs::PoseStamped::ConstPtr &msg) {
 
     std::string str = POSE_NAME_GROUNDTRUTH;
-    ROS_DEBUG_STREAM("callback " << str);
+    ROS_DEBUG_STREAM("callback " << str << " : " << msg->header.stamp.toSec());
 
     groundtruth_path.poses.push_back(*msg);
     groundtruth_path.header=msg->header;
@@ -581,41 +639,88 @@ void SlamFusion::publish() {
 //    pub_median_pose.publish(path_median.poses.back());
 //    pub_median_path.publish(path_median);
 //    if(is_use_slam[0]){
-//        pub_slam_pose[0].publish(paths[0].poses.back());
+//        pub_slam_pose[0].publish(paths[0].poses_with_covariance.back());
 //        pub_slam_path[0].publish(paths[0]);
+//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
 //    }
 //    if(is_use_slam[1]){
-//        pub_slam_pose[1].publish(paths[1].poses.back());
+//        pub_slam_pose[1].publish(paths[1].poses_with_covariance.back());
 //        pub_slam_path[1].publish(paths[1]);
+//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
 //    }
 //    if(is_use_slam[2]){
-//        pub_slam_pose[2].publish(paths[2].poses.back());
+//        pub_slam_pose[2].publish(paths[2].poses_with_covariance.back());
 //        pub_slam_path[2].publish(paths[2]);
+//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
 //    }
 //    if(is_use_slam[3]){
-//        pub_slam_pose[3].publish(paths[3].poses.back());
+//        pub_slam_pose[3].publish(paths[3].poses_with_covariance.back());
 //        pub_slam_path[3].publish(paths[3]);
+//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
 //    }
+
+
 }
 
 void SlamFusion::callback_finish(const std_msgs::EmptyConstPtr &msg) {
 
-    for (int i = 0; i < groundtruth_path.poses.size(); i++) {
-        if (is_use_slam[0]) {
-            pub_slam_pose[0].publish(paths[0].poses_with_covariance[i]);
-        }
-        if (is_use_slam[1]) {
-            pub_slam_pose[1].publish(paths[1].poses_with_covariance[i]);
-        }
-        if (is_use_slam[2]) {
-            pub_slam_pose[2].publish(paths[2].poses_with_covariance[i]);
-        }
-        if (is_use_slam[3]) {
-            pub_slam_pose[3].publish(paths[3].poses_with_covariance[i]);
+    std::cout<<"callback_finish"<<std::endl;
+    rosbag::Bag bag;
+    bag.open("test.bag",rosbag::bagmode::Write);
+
+    std::vector<std::string> str={  "local_cs/sptam_pose",
+                                    "local_cs/limo_pose",
+                                    "local_cs/orb_pose",
+                                    "local_cs/ndt_pose"};
+
+    for(int pi=0;pi<4;pi++){
+        for(int i=0;i<paths[pi].poses_with_covariance.size();i++){
+            if (is_use_slam[pi]) {
+                ros::Time time=paths[pi].poses_with_covariance[i].header.stamp;
+                if(time.toSec()<=0.0){
+                    continue;
+                }
+                std::cout<<str[pi]<<std::endl;
+                bag.write(str[pi],time,paths[pi].poses_with_covariance[i]);
+//            pub_slam_pose[pi].publish(paths[pi].poses_with_covariance[i]);
+//                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    for(int i=0;i<groundtruth_path.poses.size();i++){
+        ros::Time time=groundtruth_path.poses[i].header.stamp;
+        if(time.toSec()<=0.0){
+            continue;
+        }
+        std::cout<<POSE_NAME_GROUNDTRUTH<<std::endl;
+        bag.write(POSE_NAME_GROUNDTRUTH,time,groundtruth_path.poses[i]);
+//            pub_slam_pose[pi].publish(paths[pi].poses_with_covariance[i]);
+//        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    }
+
+
+
+//    for (int i = 0; i < groundtruth_path.poses.size(); i++) {
+//        if (is_use_slam[0]) {
+//            pub_slam_pose[0].publish(paths[0].poses_with_covariance[i]);
+//            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+//        }
+//        if (is_use_slam[2]) {
+//            pub_slam_pose[2].publish(paths[2].poses_with_covariance[i]);
+//            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+//        }
+//        if (is_use_slam[3]) {
+//            pub_slam_pose[3].publish(paths[3].poses_with_covariance[i]);
+//            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+//        }
+//    }
+
+    bag.close();
+    std::cout << "Close Bag" <<std::endl;
+
+
 }
 
 // -----------------------------------

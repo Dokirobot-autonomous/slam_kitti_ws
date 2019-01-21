@@ -222,6 +222,7 @@ struct LandmarkDepthError {
 };
 
 struct PoseRegularization {
+    // scale: 移動する前の位置間の距離
     PoseRegularization(double scale) : scale_(scale) {
         ;
     }

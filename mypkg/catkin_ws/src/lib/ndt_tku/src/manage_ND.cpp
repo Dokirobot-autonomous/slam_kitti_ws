@@ -340,3 +340,20 @@ double probability_on_ND(NDPtr nd, double xp, double yp, double zp)
     return 0;
   return (e);
 }
+
+double mahalanobis_on_ND(NDPtr nd, double xp, double yp, double zp){
+
+  //  double xp,yp,zp;
+  double e;
+
+  if (nd->num < 5)
+    return 0;
+
+  e = (xp * xp * nd->inv_covariance[0][0] + yp * yp * nd->inv_covariance[1][1] +
+           zp * zp * nd->inv_covariance[2][2] + 2.0 * xp * yp * nd->inv_covariance[0][1] +
+           2.0 * yp * zp * nd->inv_covariance[1][2] + 2.0 * zp * xp * nd->inv_covariance[2][0]) /
+          2.0;
+
+  return e;
+
+}

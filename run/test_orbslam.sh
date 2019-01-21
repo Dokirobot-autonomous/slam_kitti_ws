@@ -4,13 +4,17 @@
 xterm -e bash -c 'roscore' &
 sleep 2
 
-#new terminal 4
-xterm -e bash -c 'cd ~/slam_kitti_ws/methods/orb_slam; roslaunch orb_slam_ros orb_slam_stereo.launch' &
-sleep 10
+##new terminal 4
+#xterm -e bash -c 'cd ~/slam_kitti_ws/methods/orb_slam; roslaunch orb_slam_ros orb_slam_stereo.launch' &
+#sleep 10
 
 #new terminal 2
 xterm -e bash -c 'cd ~/dataset/rosbag/Kitti; rosbag play 01.bag -r 0.1 --pause --clock /sensor/camera/grayscale/left/image_rect:=/sensor/camera/grayscale/left/image_raw /sensor/camera/grayscale/right/image_rect:=/sensor/camera/grayscale/right/image_raw' &
 sleep 1
+
+#new terminal 4
+cd ~/slam_kitti_ws/methods/orb_slam; roslaunch orb_slam_ros orb_slam_stereo.launch
+#sleep 10
 
 
 ##new terminal 2
