@@ -41,6 +41,7 @@
 
 /*grobal variables*/
 NDMapPtr NDmap;
+NDMapPtr NDscan;
 NDPtr NDs;
 int NDs_num;
 
@@ -75,6 +76,7 @@ static tf::Quaternion q_local_to_global;
 static Eigen::Matrix4f tf_local_to_global;
 
 void save_nd_map(char *name);
+void callback_save_map(const std_msgs::Empty::ConstPtr &msg);
 
 static pcl::PointCloud<pcl::PointXYZ> map;
 
@@ -423,7 +425,7 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
 
   for (int i = 0; i < scan_points_num; i++)
   {
-    map_points_i[i] = scan_points_i[i];
+    map_points_i[i] = scan_points_i[i]; // intensity
   }
     //// std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
@@ -431,11 +433,14 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   distance = (key_pose.x - pose.x) * (key_pose.x - pose.x) + (key_pose.y - pose.y) * (key_pose.y - pose.y) +
              (key_pose.z - pose.z) * (key_pose.z - pose.z);
 
+//  NDscan = initialize_NDmap();
+
   if (g_map_update && (!is_map_exist || (distance > 0.1 * 0.1 && scan_points_num > 100)))
   {
     int i;
     for (i = 0; i < scan_points_num; i++)
     {
+//      add_point_map(NDscan, &map_points[i]);
       add_point_map(NDmap, &map_points[i]);
     }
     key_pose = pose;
@@ -462,7 +467,8 @@ void points_callback(const sensor_msgs::PointCloud2::ConstPtr &msg)
   transform.setOrigin(tf::Vector3(global_t2(0, 3), global_t2(1, 3), global_t2(2, 3)));
   transform.setRotation(ndt_q);
 
-  br.sendTransform(tf::StampedTransform(transform, current_scan_time, "map", "base_link"));
+//  br.sendTransform(tf::StampedTransform(transform, current_scan_time, "map", "base_link"));
+  br.sendTransform(tf::StampedTransform(transform, current_scan_time, "ndt_map", "sensor/velodyne"));
 
   matching_end = std::chrono::system_clock::now();
   exe_time = std::chrono::duration_cast<std::chrono::microseconds>(matching_end - matching_start).count() / 1000.0;
@@ -556,12 +562,73 @@ void save_nd_map(char *name)
   cloud.header.frame_id = "/ndt_map";
   cloud.width = cloud.points.size();
   cloud.height = 1;
-  pcl::io::savePCDFileASCII("/tmp/ndmap.pcd", cloud);
+//  pcl::io::savePCDFileASCII("/tmp/ndmap.pcd", cloud);
   printf("NDMap points num: %d points.\n", (int)cloud.points.size());
 
   sensor_msgs::PointCloud2::Ptr ndmap_ptr(new sensor_msgs::PointCloud2);
   pcl::toROSMsg(cloud, *ndmap_ptr);
   ndmap_pub.publish(*ndmap_ptr);
+}
+
+void callback_save_map(const std_msgs::Empty::ConstPtr &msg)
+{
+    int i, j, k, layer;
+    NDData nddat;
+    NDMapPtr ndmap;
+    NDPtr *ndp;
+//    FILE *ofp;
+
+    pcl::PointCloud<pcl::PointXYZ> cloud;
+    pcl::PointXYZ p;
+
+    ndmap = NDmap;
+//    ofp = fopen(name, "w");
+
+    for (layer = 0; layer < 2; layer++)
+    {
+        ndp = ndmap->nd;
+        for (i = 0; i < ndmap->x; i++)
+        {
+            for (j = 0; j < ndmap->y; j++)
+            {
+                for (k = 0; k < ndmap->z; k++)
+                {
+                    if (*ndp)
+                    {
+                        update_covariance(*ndp);
+                        nddat.nd = **ndp;
+                        nddat.x = i;
+                        nddat.y = j;
+                        nddat.z = k;
+                        nddat.layer = layer;
+
+//                        fwrite(&nddat, sizeof(NDData), 1, ofp);
+
+                        // regist the point to pcd data;
+                        p.x = (*ndp)->mean.x;
+                        p.y = (*ndp)->mean.y;
+                        p.z = (*ndp)->mean.z;
+                        cloud.points.push_back(p);
+                    }
+                    ndp++;
+                }
+            }
+        }
+        ndmap = ndmap->next;
+    }
+//    fclose(ofp);
+
+    // save pcd
+
+    cloud.header.frame_id = "/ndt_map";
+    cloud.width = cloud.points.size();
+    cloud.height = 1;
+//  pcl::io::savePCDFileASCII("/tmp/ndmap.pcd", cloud);
+    printf("NDMap points num: %d points.\n", (int)cloud.points.size());
+
+    sensor_msgs::PointCloud2::Ptr ndmap_ptr(new sensor_msgs::PointCloud2);
+    pcl::toROSMsg(cloud, *ndmap_ptr);
+    ndmap_pub.publish(*ndmap_ptr);
 }
 
 int main(int argc, char *argv[])
@@ -693,6 +760,7 @@ int main(int argc, char *argv[])
   localizer_path_pub = nh.advertise<nav_msgs::Path>("/current_path", 1000);
 
   ros::Subscriber points_sub = nh.subscribe("points_raw", 1000, points_callback);
+  ros::Subscriber save_map_flag_sub=nh.subscribe("save_map", 1000, callback_save_map);
   // std::cout<<__FILE__<<","<<__LINE__<<std::endl;
 
   ros::spin();

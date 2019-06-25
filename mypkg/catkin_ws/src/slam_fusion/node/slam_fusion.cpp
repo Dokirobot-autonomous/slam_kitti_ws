@@ -14,6 +14,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <nav_msgs/Odometry.h>
 #include <tf/transform_listener.h>
 #include <std_msgs/Empty.h>
 
@@ -24,14 +25,16 @@
 //#define USE_SLAM_NAMES "SPTAM,LIMO,ORB,NDT"
 
 bool USE_SPTAM=false;
-bool USE_LIMO=true;
-bool USE_ORB=true;
-bool USE_NDT=true;
+bool USE_LIMO=false;
+bool USE_ORB=false;
+bool USE_NDT=false;
+bool USE_LOAM=true;
 
 #define POSE_NAME_SPTAM "sptam/robot/pose"
 #define POSE_NAME_LIMO "/estimate/active_path_with_covariance"
 #define POSE_NAME_ORB "/vehicle_pose_with_covariance"
 #define POSE_NAME_NDT "/current_pose_with_covariance"
+#define POSE_NAME_LOAM "/integrated_to_init"
 #define POSE_NAME_GROUNDTRUTH "/groundtruth_pose/pose"
 
 /*
@@ -196,6 +199,69 @@ void transform(const tf::TransformListener &listener,const geometry_msgs::PoseWi
     }
 
 }
+void transform(const tf::TransformListener &listener,const nav_msgs::Odometry& origin,geometry_msgs::PoseWithCovarianceStamped *out){
+
+    // Poseの変換
+    geometry_msgs::PoseStamped pose_origin,pose_transformed;
+    pose_origin.header=pose_transformed.header=origin.header;
+    pose_origin.pose=origin.pose.pose;
+    try {
+        listener.transformPose("local_cs",pose_origin.header.stamp,pose_origin,pose_origin.header.frame_id,pose_transformed);
+    }
+    catch (tf::TransformException ex) {
+        ROS_ERROR("%s", ex.what());
+        ros::Duration(1.0).sleep();
+    }
+
+    /* Covarianceの変換 */
+    // 回転量を算出
+    std::vector<double> rpy_origin,rpy_transformed,rpy_diff;
+    quat2rpy(pose_origin.pose.orientation,&rpy_origin);
+    quat2rpy(pose_transformed.pose.orientation,&rpy_transformed);
+    rpy_diff={rpy_transformed[0]-rpy_origin[0],rpy_transformed[1]-rpy_origin[1],rpy_transformed[2]-rpy_origin[2]};
+    Eigen::Matrix3d rot;
+    rot= Eigen::AngleAxisd(rpy_diff[0], Eigen::Vector3d::UnitX())
+         * Eigen::AngleAxisd(rpy_diff[1], Eigen::Vector3d::UnitY())
+         * Eigen::AngleAxisd(rpy_diff[2], Eigen::Vector3d::UnitZ());
+
+    Eigen::MatrixXd cov_origin(6,6);
+    for(int i=0;i<6;i++){
+        for(int j=0;j<6;j++){
+            cov_origin(j,i)=origin.pose.covariance[j*6+i];
+        }
+    }
+
+    Eigen::MatrixXd convert(6,6);
+    for(int i=0;i<3;i++){
+        for(int j=0;j<3;j++){
+            convert(j,i)=rot(j,i);
+        }
+    }
+    for(int i=3;i<6;i++){
+        for(int j=0;j<3;j++){
+            convert(j,i)=convert(i,j)=0.0;
+        }
+    }
+    for(int i=3;i<6;i++){
+        for(int j=3;j<6;j++){
+            if(i==j)    convert(i,j)=1;
+            else        convert(i,j)=0;
+        }
+    }
+
+    Eigen::MatrixXd cov_transformed(6,6);
+    cov_transformed=convert*cov_origin*convert.transpose();
+
+    out->header=pose_transformed.header;
+    out->pose.pose=pose_transformed.pose;
+    for(int i=0;i<6;i++){
+        for(int j=0;j<6;j++){
+            out->pose.covariance[j*6+i]=cov_transformed(j,i);
+        }
+    }
+
+}
+
 
 class SlamFusion {
 
@@ -241,6 +307,7 @@ public:
     void callback_limo_path(const slam_fusion::PathWithCovariance::ConstPtr &msg);
     void callback_orb_pose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
     void callback_ndt_pose(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &msg);
+    void callback_loam_pose(const nav_msgs::Odometry::ConstPtr &msg);
     void callback_groundtruth(const geometry_msgs::PoseStamped::ConstPtr &msg);
     void callback_finish(const std_msgs::EmptyConstPtr &msg);
 
@@ -263,7 +330,7 @@ void SlamFusion::initialize(ros::NodeHandle _nh) {
 
     nh = _nh;
 
-    is_use_slam={USE_SPTAM,USE_LIMO,USE_ORB,USE_NDT};
+    is_use_slam={USE_SPTAM,USE_LIMO,USE_ORB,USE_NDT,USE_LOAM};
 
     std::string str;
     slam_num=0;
@@ -279,11 +346,14 @@ void SlamFusion::initialize(ros::NodeHandle _nh) {
     if(is_use_slam[3]){
         slam_num++;
     }
+    if(is_use_slam[4]){
+        slam_num++;
+    }
 
-    paths.resize(4);
-    get_latest_pose_ = std::vector<bool>(4, false);
-    pub_slam_pose.resize(4);
-    pub_slam_path.resize(4);
+    paths.resize(is_use_slam.size());
+    get_latest_pose_ = std::vector<bool>(is_use_slam.size(), false);
+    pub_slam_pose.resize(is_use_slam.size());
+    pub_slam_path.resize(is_use_slam.size());
 
     pub_groundtruth_path=nh.advertise<nav_msgs::Path>("/groundtruth_pose/path",10);
 //    pub_mean_pose=nh.advertise<geometry_msgs::PoseStamped>("/fusion/mean_pose",10);
@@ -305,6 +375,10 @@ void SlamFusion::initialize(ros::NodeHandle _nh) {
     if(is_use_slam[3]){
         pub_slam_pose[3]=nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/local_cs/ndt_pose",10);
         pub_slam_path[3]=nh.advertise<nav_msgs::Path>("/local_cs/ndt_path",10);
+    }
+    if(is_use_slam[4]){
+        pub_slam_pose[4]=nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/local_cs/loam_pose",10);
+        pub_slam_path[4]=nh.advertise<nav_msgs::Path>("/local_cs/loam_path",10);
     }
 
 
@@ -447,6 +521,27 @@ void SlamFusion::callback_ndt_pose(const geometry_msgs::PoseWithCovarianceStampe
 
 }
 
+void SlamFusion::callback_loam_pose(const nav_msgs::Odometry::ConstPtr &msg) {
+
+    std::string str = POSE_NAME_LOAM;
+    ROS_DEBUG_STREAM("callback " << str << " : " << msg->header.stamp.toSec());
+
+    /***** 座標変換 *****/
+
+    geometry_msgs::PoseWithCovarianceStamped pose_transformed;
+    transform(listener,*msg,&pose_transformed);
+
+    paths[4].poses_with_covariance.push_back(pose_transformed);
+    paths[4].header=pose_transformed.header;
+
+    get_latest_pose_[4] = true;
+    if (existAllPose()) {
+        fusion();
+        publish();
+    }
+
+}
+
 void SlamFusion::callback_groundtruth(const geometry_msgs::PoseStamped::ConstPtr &msg) {
 
     std::string str = POSE_NAME_GROUNDTRUTH;
@@ -470,12 +565,15 @@ bool SlamFusion::existAllPose() {
     if(!is_use_slam[3]){
         get_latest_pose_[3]=true;
     }
+    if(!is_use_slam[4]){
+        get_latest_pose_[4]=true;
+    }
 
     auto itr = std::find(get_latest_pose_.begin(), get_latest_pose_.end(), false);
     if (itr == get_latest_pose_.end()) {
         ROS_DEBUG_STREAM("Getting All Packages' Pose");
         fusion();
-        get_latest_pose_ = std::vector<bool>(4, false);
+        get_latest_pose_ = std::vector<bool>(is_use_slam.size(), false);
 
         return true;
     } else {
@@ -492,6 +590,9 @@ bool SlamFusion::existAllPose() {
         }
         if(is_use_slam[3]){
             std::cout<<"ndt:   " << get_latest_pose_[3] <<std::endl;
+        }
+        if(is_use_slam[4]){
+            std::cout<<"loam:   " << get_latest_pose_[4] <<std::endl;
         }
 
         return false;
@@ -671,9 +772,10 @@ void SlamFusion::callback_finish(const std_msgs::EmptyConstPtr &msg) {
     std::vector<std::string> str={  "local_cs/sptam_pose",
                                     "local_cs/limo_pose",
                                     "local_cs/orb_pose",
-                                    "local_cs/ndt_pose"};
+                                    "local_cs/ndt_pose",
+                                    "local_cs/loam_pose"};
 
-    for(int pi=0;pi<4;pi++){
+    for(int pi=0;pi<is_use_slam.size();pi++){
         for(int i=0;i<paths[pi].poses_with_covariance.size();i++){
             if (is_use_slam[pi]) {
                 ros::Time time=paths[pi].poses_with_covariance[i].header.stamp;
@@ -755,6 +857,9 @@ int main(int argc, char **argv) {
     }
     if(fusion.is_use_slam[3]){
         sub_ndt_pose = nh.subscribe(POSE_NAME_NDT, 1, &SlamFusion::callback_ndt_pose, &fusion);
+    }
+    if(fusion.is_use_slam[4]){
+        sub_ndt_pose = nh.subscribe(POSE_NAME_LOAM, 1, &SlamFusion::callback_loam_pose, &fusion);
     }
     sub_fin=nh.subscribe("finish",1,&SlamFusion::callback_finish,&fusion);
     ros::Subscriber sub_groundtruth = nh.subscribe(POSE_NAME_GROUNDTRUTH, 1, &SlamFusion::callback_groundtruth, &fusion);
